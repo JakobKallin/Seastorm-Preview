@@ -1,0 +1,34 @@
+This file describes the purpose and usage of each file in the current
+directory and summarizes the purpose of each subdirectory.
+
+=files=
+==install.sh==
+Included in the Linux installer, it runs the install script (seattleinstaller.py,
+found in trunk/dist) when called.
+
+==LICENSE.txt==
+Contains the legal information for Seattle. This copy is formatted specifically
+for Linux systems (i.e., without the carriage return) and will over-wright the
+general LICENSE.txt file which does include the carriage return.
+
+==manifest.txt==
+This file (see description at top).
+
+==README.txt==
+Includes an introduction to Seattle, installation and uninstall instructions,
+along with contact information.
+
+==start_seattle.sh==
+Included in the Linux installer, it starts the seattle programs which run in the
+background.
+
+==stop_seattle.sh=
+Included in the Linux installer, it kills all seattle processes by running
+stop_all_seattle_processes.py
+
+==seattleuninstaller.py==
+Included in the Linux installer, it kills all seattle processes and
+removes the seattle starter line from the crontab when run.
+
+==uninstall.sh==
+Included in the Linux installer, it runs seattleuninstaller.py when called.

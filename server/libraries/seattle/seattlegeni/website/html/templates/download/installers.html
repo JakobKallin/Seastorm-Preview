@@ -1,0 +1,39 @@
+{% extends "download/download_base.html" %}
+
+{% block title %}
+Get Donations - Seattle Clearinghouse
+{% endblock title %}
+
+{% block style %}
+{{ block.super }}
+<link href="{{ MEDIA_URL }}css/download.css" rel="stylesheet" type="text/css" />
+{% endblock style %}
+
+{% block script %}
+{{ block.super }}
+<script type="text/javascript" src="{{ MEDIA_URL }}scripts/jquery.js" charset="utf-8"></script>
+<script type="text/javascript" src="{{ MEDIA_URL }}scripts/jqbrowser.js" charset="utf-8"></script>
+<script type="text/javascript" src="{{ MEDIA_URL }}scripts/download.js" charset="utf-8"></script>
+{% endblock script %}
+
+{% block nav_getdonations %}
+<td class="active">Donate Resources</td>
+{% endblock nav_getdonations %}
+
+{% block content %}
+	<div id="main">
+		<div id="middle">
+		  <div id="downloadlink">
+		    {% if validuser %}
+		    <p>Donate resources on behalf of {{ username }}:</p>
+		    </div>
+			  {% include "common/installers.html" %}
+		    {% else %}
+		    <p>The given username doesn't exist!</p><br>
+		    <p>Please check the username.</p>
+		    </div>
+		    {% endif %}
+		</div>
+	</div>
+
+{% endblock content %}

@@ -1,0 +1,47 @@
+# This program benchmarks the file I/O speed of RepyV2 when creating, 
+# deleting, reading, and writing file data.
+
+# This is also used for deletion
+CREATE_FILE_COUNT = 10000
+READ_WRITE_COUNT = 10000
+READ_WRITE_BLOCK_SIZE = 1024
+
+#### Creation
+beforetime = getruntime()
+for filenumber in range(CREATE_FILE_COUNT):
+  openfile('benchmarkfile.'+str(filenumber),True).close()
+
+aftertime = getruntime()
+log('Time to create '+str(CREATE_FILE_COUNT)+' files: '+str(aftertime - beforetime)+'\n')
+
+
+#### Deletion
+beforetime = getruntime()
+for filenumber in range(CREATE_FILE_COUNT):
+  removefile('benchmarkfile.'+str(filenumber))
+
+aftertime = getruntime()
+log('Time to delete '+str(CREATE_FILE_COUNT)+' files: '+str(aftertime - beforetime)+'\n')
+
+
+#### Write
+fo = openfile('benchmarkfile.rw',True)
+beforetime = getruntime()
+for writecount in range(READ_WRITE_COUNT):
+  fo.writeat('X' *  READ_WRITE_BLOCK_SIZE,writecount*READ_WRITE_BLOCK_SIZE)
+
+aftertime = getruntime()
+log('Time to write '+str(READ_WRITE_COUNT)+' blocks of size '+str(READ_WRITE_BLOCK_SIZE)+': '+str(aftertime - beforetime)+'\n')
+
+
+#### READ
+beforetime = getruntime()
+for readcount in range(READ_WRITE_COUNT):
+  fo.readat(READ_WRITE_BLOCK_SIZE,readcount*READ_WRITE_BLOCK_SIZE)
+
+aftertime = getruntime()
+log('Time to read '+str(READ_WRITE_COUNT)+' blocks of size '+str(READ_WRITE_BLOCK_SIZE)+': '+str(aftertime - beforetime)+'\n')
+
+fo.close()
+
+removefile('benchmarkfile.rw')

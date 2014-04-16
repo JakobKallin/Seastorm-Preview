@@ -1,0 +1,224 @@
+/*****************************************************************
+<File Name>
+	common.css
+
+<Started>
+	January 18, 2009
+	
+<Refactored>
+    March 7, 2009
+
+<Author>
+	shawiz@cs.washington.edu
+	Xuanhua (Sean) Ren
+
+<Purpose>
+	Provides the common stylesheet for Seattle Clearinghouse
+
+
+*****************************************************************/
+
+
+/*******************
+* RESET
+********************/
+
+* {
+	margin: 0;
+	padding: 0;
+}
+
+fieldset, img {
+	border: 0;
+}
+
+
+
+/************************
+* GENERAL
+************************/
+
+body {
+	background-color: #fff;
+	font-family: "Segoe UI", "Lucida Grande", "Helvetica" , sans-serif;
+	font-size: 12pt;
+	  min-width: 1000px; /* ADDED July 2012 */
+	  margin: 0px auto; /* ADDED Aug 14, 2012 */
+}
+
+ol {
+    list-style-position: inside;
+}
+
+a {
+    text-decoration: none;
+    color: #0066FF;
+}
+
+code {
+    font-family: "Consolas", "Lucida Console", "Monaco", "Courier New";
+}
+
+.odd {
+    background-color: #fff;
+}
+
+.even {
+    background-color: #eee;
+}
+
+
+/************************
+* LAYOUT
+************************/
+
+/***** Header *****/
+
+#header {
+    width: 900px;   /* Edited Aug 14, 2012  prev width:70%*/
+    margin: 30px auto 20px auto;
+}
+
+#header #logo {
+    font-size: 42px;  /* Edited Sept 28, 2012  prev value :36pt*/
+    font-weight: bold;
+}
+
+#header #logo a {
+    color: #000;
+}
+
+#header #caption {
+    margin-left: 20px;
+    font-size: 13.3333px; 
+}
+
+#header #caption a {
+	color: #0066FF;
+}
+
+
+/***** Navigator *****/
+
+#navigator {
+    border-bottom: 3px solid #222;
+    width: 100%;
+    margin: 0 auto;  /* ADDED Aug 14, 2012 */
+}
+
+#tabs {
+    margin: 0 auto; 
+    width: 900px; /* Editied Aug 14, 2012 prev width: 70% */
+}
+
+#meta {
+    float: right;
+    font-size: 13pt;
+    margin: 5px 0;
+}
+
+#meta a.logout {
+    color: red;
+}
+
+#tabs table {
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+#tabs table tr td {
+   padding: 5px 15px;
+   font-size: 14pt;
+   border-top: 1px solid #222;
+   border-right: 2px solid #222;
+   border-left: 2px solid #222;
+}
+
+#tabs table tr td a {
+    color: #000;
+}
+
+#tabs table tr td.active {
+    background-color: #222;
+    color: #fff;
+}
+
+#tabs table tr td.active a {
+    color: #fff;
+}
+
+
+/***** Main *****/
+
+#main {
+    width: 100%;
+    height: 400px;
+    padding: 40px 0;
+    background-image: url(../images/bg.png);
+    background-repeat: repeat-x;
+}
+
+#middle {
+   margin: 0 auto;
+   width: 900px;  /* Edited Aug 14, 2012 prev width:70% */
+  padding-bottom: 60px;
+}
+
+
+/***** Notifications *****/
+
+.warning {
+	border: 1px solid red;
+	margin: 20px 60px;
+	padding: 10px 20px;
+	color: red;
+	background-color: #f2dbdb;
+	text-align: center;
+}
+.warning2 {
+	border: 1px solid red;
+	margin: 20px 60px;
+	padding: 10px 20px;
+	color: red;
+	background-color: #f2dbdb;
+	text-align: center;
+}
+.message {
+	border: 1px solid green;
+	   max-width : 682px;  /* ADDED July 2012 */
+	margin: 20px 60px;
+	padding: 10px 20px;
+	color: green;
+	font-weight: bold;
+	background-color: #CCFFCC;
+	text-align: center;
+}
+
+.tooltip {
+	background-color: #efefef;
+	color: #333;
+	font-size: 10pt;
+	padding: 3px;
+    border: solid 1px #333;
+	z-index:100;
+}
+
+ul.errorlist li {
+	color: red;
+	font-weight: normal;
+	font-size: 10pt;
+	background-color: #f2dbdb;
+    padding: 3px;
+    list-style-position: inside;
+}
+
+#learn-about-seattle {
+   /* max-width : 70%;*/
+    text-align : center;
+    background-color : #ded;
+    border : 1px solid #0a0;
+    padding : 1em;
+    margin-top : 1em;
+    margin-bottom : 1em;
+    font-size : 1.3em;
+}

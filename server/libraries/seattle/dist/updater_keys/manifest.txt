@@ -1,0 +1,13 @@
+This file describes the purpose and usage of each file in the current
+directory and summarizes the purpose of each subdirectory.
+
+=files=
+==manifest.txt==
+This file (see description at top).
+
+==updater.privatekey==
+A demo private key that can be used FOR TESTING PURPOSES ONLY.
+
+==updater.publickey==
+A demo public key that can be used FOR TESTING PURPOSES ONLY.
+

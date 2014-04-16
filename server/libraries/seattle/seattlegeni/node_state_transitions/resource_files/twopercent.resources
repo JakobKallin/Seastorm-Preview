@@ -1,0 +1,35 @@
+resource cpu .02
+resource memory 25000000   # 25 MiB
+resource diskused 100000000 # 100 MiB
+resource events 50
+resource filewrite 10000
+resource fileread 10000
+resource filesopened 10
+resource insockets 10
+resource outsockets 10
+resource netsend 10000
+resource netrecv 10000
+resource loopsend 100000
+resource looprecv 100000
+resource lograte 10000
+resource random 1000
+resource messport %s
+resource messport %s
+resource messport %s
+resource messport %s
+resource messport %s
+resource messport %s
+resource messport %s
+resource messport %s
+resource messport %s
+resource messport %s
+resource connport %s
+resource connport %s
+resource connport %s
+resource connport %s
+resource connport %s
+resource connport %s
+resource connport %s
+resource connport %s
+resource connport %s
+resource connport %s

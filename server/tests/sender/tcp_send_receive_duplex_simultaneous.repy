@@ -1,0 +1,5 @@
+socket = openconnection('127.0.0.1', 12346, '127.0.0.1', 12345, 2)
+socket.send('sender-payload')
+sleep(1)
+socket.recv(100)
+socket.close()

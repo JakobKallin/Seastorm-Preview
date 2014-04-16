@@ -1,0 +1,120 @@
+
+A target can be either a host:port:vesselname, %ID, or a group name.
+
+See https://seattle.cs.washington.edu/wiki/RepyTutorial for more info!
+
+add [target] [to group]      -- Adds a target (a vessel name or group) to a 
+                                group
+as keyname [command]         -- Run a command using an identity (or changes the
+                                default)
+browse                       -- Find vessels I can control
+cat remotefn                 -- Display the contents of a remote file
+delete remotefn              -- Delete a file.
+download remotefn (localfn)  -- Download a file (to multiple local files)
+exit                         -- Exits the shell
+list                         -- Update and display information about the 
+                                vessels
+loadkeys fn [as identity]    -- Loads filename.publickey and 
+                                filename.privatekey
+on target [command]          -- Run a command on a target (or changes the 
+                                default)
+remove [target] [from group] -- Removes a target from a group
+reset                        -- Reset the vessel (clear files / log and stop)
+run file [args ...]          -- Upload a file and start executing it
+runv1 file [args ...]        -- Upload a file and start executing it as repyV1
+runv2 file [args ...]        -- Upload a file and start executing it as repyV2
+set                          -- Changes the shell or vessels (see 'help set')
+show                         -- Displays the shell state (see 'help show')
+stop                         -- Stop an experiment but leave the log / files
+upload localfn (remotefn)    -- Upload a file
+
+For more commands, try:
+  help extended
+
+
+A target can be either a host:port:vesselname, %ID, or a group name.
+
+See https://seattle.cs.washington.edu/wiki/RepyTutorial for more info!
+
+contact host:port[:vessel]     -- Communicate with a node explicitly
+genkeys fn [len] [as identity] -- Creates new pub / priv keys (default 
+                                  len=1024)
+join                           -- Join vessels on the same node (requires 
+                                  owner)
+loadpriv fn [as identity]      -- Loads filename.privatekey
+loadpub fn [as identity]       -- Loads filename.publickey
+loadstate fn                   -- Load encrypted shell state from a file with 
+                                  the keyname
+move target to group           -- Add target to group, remove target from 
+                                  default
+savestate fn                   -- Save the shell's state information to a file 
+                                  with the keyname
+split resourcefn               -- Split another vessel off (requires owner)
+start file [args ...]          -- Start an experiment (doesn't upload)
+startv1 file [args ...]        -- Start an experiment (doesn't upload) in 
+                                  repyV1
+startv2 file [args ...]        -- Start an experiment (doesn't upload) in 
+                                  repyV2
+update                         -- Update information about the vessels
+
+
+Displays information regarding the current state of Seattle, depending on
+the additional keywords that are passed in.
+
+  (*) No need to update prior, the command contacts the nodes anew
+
+show advertise     -- Shows whether the node manager will advertise the 
+                      vessel's keys in the advertise services.
+show files         -- Display a list of files in the vessel (*)
+show hostname      -- Display the hostnames of the nodes
+show identities    -- Display the known identities
+show info          -- Display general information about the vessels
+show ip [to file]  -- Display the ip addresses of the nodes
+show keys          -- Display the known keys
+show log [to file] -- Display the log from the vessel (*)
+show offcut        -- Display the offcut resource for the node (*)
+show ownerinfo     -- Display owner information for the vessels
+show resources     -- Display the resources / restrictions for the vessel (*)
+show targets       -- Display a list of targets
+show timeout       -- Display the timeout for nodes
+show uploadrate    -- Display the upload rate which seash uses to estimate the 
+                      required time for a file upload
+show users         -- Display the user keys for the vessels
+
+
+show info
+
+This command prints general information about vessels in the default group
+including the version, nodeID, etc.
+
+Example:
+exampleuser@%1 !> show info
+192.x.x.178:1224:v3 has no information (try 'update' or 'list')
+exampleuser@%1 !> update
+exampleuser@%1 !> show info
+192.x.x.178:1224:v3 {'nodekey': {'e': 65537L, 'n': 929411623458072017781884599109L}, 'version': '0.1r', 'nodename': '192.x.x.175'}
+
+
+show ip 
+show ip [to file]
+
+This lists the ip addresses of the vessels in the default group.   These IP
+addresses may be optionally written to a file.   
+
+Note that machines behind a NAT, mobile devices, or other systems with 
+atypical network connectivity may list a host name instead.
+
+Example:
+exampleuser@ !> show targets
+browsegood ['192.x.x.2:1224:v12', '192.x.x.2:1224:v3', '193.x.x.42:1224:v18', '219.x.x.62:1224:v4']
+%4 ['219.x.x.62:1224:v4']
+%all ['192.x.x.2:1224:v12', '192.x.x.2:1224:v3', '193.x.x.42:1224:v18', '219.x.x.62:1224:v4']
+%1 ['192.x.x.2:1224:v12']
+%3 ['193.x.x.42:1224:v18']
+%2 ['192.x.x.2:1224:v3']
+exampleuser@ !> on browsegood
+exampleuser@browsegood !> show ip
+192.x.x.2
+193.x.x.42
+219.x.x.62
+

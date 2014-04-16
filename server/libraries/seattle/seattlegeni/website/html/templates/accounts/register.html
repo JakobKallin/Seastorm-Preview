@@ -1,0 +1,128 @@
+{% extends "accounts/accounts_base.html" %}
+
+{% comment %}
+<Program>
+  register.html
+
+<Author>
+  Originally by?:
+  Justin Samuel 2009
+
+  Modified:
+  Gaetano Pressimone 2012
+  
+<Purpose>
+  Django template file for Seattle Clearinghouse's 'register' page.  The page 
+  allows a visitor to create a new account.
+
+<Extends>
+  accounts/accounts_base.html
+
+<Stylesheet>
+  common.css
+  account.css
+
+<Scripts>
+  register.js
+
+<Template Variables>
+  page_top_errors:
+		Error messages to display.
+	
+  form: 
+		New user registration form.  See GeniUserCreationForm in forms.py for more info.
+    .username:
+		.password1: 
+		.password2: 
+    .affiliation:  
+		.email:  
+    .pubkey:  
+    .gen_upload_choice: 
+
+{% endcomment %}
+{% block title %}
+Register - Clearinghouse
+{% endblock title %}
+
+{% block script %}
+{{ block.super }}
+<script type="text/javascript" src="{{MEDIA_URL}}scripts/register.js" charset="utf-8"></script>
+{% endblock script %}
+
+{% block nav_register %}
+<td class="active">Register</td>
+{% endblock nav_register %}
+
+{% block content %}
+	<div id="main">
+		<div id="middle">
+		
+		  <div id="learn-about-seattle">
+		    New to Seattle? We suggest you first
+		    <a href="https://seattle.cs.washington.edu/">learn about Seattle</a>
+		    before using the Clearinghouse, a resource sharing website.
+		  </div>
+		
+		  <form action="{% url register %}" method="POST" enctype="multipart/form-data">
+
+		  {% if form.username.errors or form.password1.errors or form.password2.errors or form.affiliation.errors or form.email.errors or form.pubkey.errors %}
+		  <p class="warning2">
+		  Please correct the following:</p>
+		  {% endif %}
+		  
+		  {% if page_top_errors %}
+		  <p class="warning">
+		  {% for error in page_top_errors %}
+		    {{ error }}
+		    <br>
+		  {% endfor %}
+		  </p>
+		  {% endif %}
+
+		  <table class="login">
+		    <tr title=' Create a username at least 3 characters long'>
+		      <td class="key">{{ form.username.label_tag }}</td>
+		      <td class="value">{{ form.username }}</td>
+		      <td>{{ form.username.errors }}</td>
+		    </tr>
+		    <tr title=' Create a password at least 6 characters long '>
+		      <td class="key">{{ form.password1.label_tag }}</td>
+		      <td class="value">{{ form.password1 }}</td>
+		      <td>{{ form.password1.errors }}</td>
+		    </tr>
+		    <tr title='Reenter the password '>
+		      <td class="key">{{ form.password2.label_tag }}</td>
+		      <td class="value">{{ form.password2 }}</td>
+		      <td>{{ form.password2.errors }}</td>
+		    </tr>
+		    <tr title='Enter the university or company you are affilated with '>
+		      <td class="key">{{ form.affiliation.label_tag }}</td>
+		      <td class="value">{{ form.affiliation }}</td>
+		      <td>{{ form.affiliation.errors }}</td>
+		    </tr>
+		    <tr title='Enter the email address you would like associated with your username '>
+		      <td class="key">{{ form.email.label_tag }}</td>
+		      <td class="value">{{ form.email }}</td>
+		      <td>{{ form.email.errors }}</td>
+		    </tr>
+		    <tr>
+		      <td class="key">{{ form.pubkey.label_tag }}</td>
+		      <td class="value">{{ form.gen_upload_choice }}</td>
+		      <td>{{ form.pubkey.errors }}</td>
+		    </tr>
+			  <tr id="uploadkey">
+			    <td class="key"></td>
+				  <td class="value">{{ form.pubkey }}</td>
+			  </tr>
+		    <tr>
+		      <td class="key"></td>
+		      <td class="value"><input type="submit" value="Register"/> <div id="loading_indicator">
+				  <img src="{{ MEDIA_URL }}images/loading_indicator.gif"/>
+				</div></td>
+		    </tr>
+		  </table>
+		  </form>
+
+		</div>
+	</div>
+{% endblock content %}

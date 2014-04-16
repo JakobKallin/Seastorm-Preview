@@ -1,0 +1,355 @@
+{% extends "control/control_base.html" %}
+
+{% comment %}
+<Program>
+  mygeni.html
+  
+<Started>
+  4 August 2009
+
+<Author>
+  Jason Chen
+  Sean (Xuanhua) Ren
+  Ivan Beschastnikh
+  
+<Purpose>
+  Django template file for Seattle Clearinghouse's 'My Seattle Clearinghouse' page.
+  The older mygeni.js functionality (graphics logic) has been ported into this page as inline javascript. 
+{% endcomment %}
+
+{% block title %}
+My Seattle Clearinghouse - Seattle Clearinghouse
+{% endblock title %}
+
+{% block style %}
+{{ block.super }}
+<link href="{{ MEDIA_URL }}css/mygeni.css" rel="stylesheet" type="text/css" />
+{% endblock style %}
+
+{% block script %}
+{{ block.super }}
+<script type="text/javascript" src="{{MEDIA_URL}}scripts/jquery.tooltip.js" charset="utf-8"></script>
+
+<script type="text/javascript">
+
+$(document).ready(function() {
+	update_credits();
+	update_shares();
+});
+
+function update_credits() {
+  $("#credits").empty();
+  $("#creditnames").empty();
+	$("#creditotherstable tr:gt(0)").empty();
+	
+	/* JTC: For now, we're assuming that credits are all being donated by "Me" */
+	add_cell("credits", "Me", 100);
+	/* add_cell("credits", json[0][i].username, json[0][i].percent); */
+	/* add_other("credits", json[1][i].username, json[1][i].percent); */
+	/* add_cell("credits", json[2][0].username, json[2][0].percent); */
+	
+	$("#vesselscredits").text({{ total_vessel_credits }} + " vessels credits");
+	$("#creditotherstable tr:odd").addClass("odd");
+	$("#creditotherstable tr:even").addClass("even");
+}
+
+function update_shares() {
+	$("#usage").empty();
+	$("#usagenames").empty();
+	$("#usageotherstable tr:gt(0)").empty();
+	var total_percent = 0;
+	
+	add_cell("shares", "Me", {{ percent_total_used }});
+	total_percent += {{ percent_total_used }};
+	
+	add_cell("shares", "Free", 100 - total_percent);
+	$("#vesselsused").text({{ used_vessel_credits }} + " vessels used");
+	$("#vesselsavailable").text("(" + {{ avail_vessel_credits }} + " available)");
+	$("#usageotherstable tr:odd").addClass("odd");
+	$("#usageotherstable tr:even").addClass("even");
+}
+
+
+/*
+	Add a block-label pair to a particular bar
+	type: "credits" if adding to the "credits" bar
+		    "shares" if adding to the "shares" bar
+	username: username of the cell to add
+	percent: percent of the cell to add
+*/
+function add_cell(type, username, percent) {
+	if (type == "credits") {
+		var block = create_block(username, percent, false);
+		var label = create_label(username, percent, false);
+		$("#credits").append(block);
+		$("#creditnames").append(label);
+	} else if (type == "shares") {
+    var block = create_block(username, percent, true);
+		var label = create_label(username, percent, true);
+		$("#usage").append(block);
+		$("#usagenames").append(label);
+	}
+}
+
+function add_other(type, username, percent) {
+	var table;
+	if (type == "credits") {
+		table = $("#creditotherstable");
+	} else if (type == "shares") {
+		table = $("#usageotherstable");
+	}
+	var tr = $(document.createElement("tr"));
+	tr.html("<td>" + username + "</td><td>" + percent + "</td>");
+	if (type == "shares") {
+		var control = $(document.createElement("td"));
+		var edit = $(document.createElement("button"));
+		edit.text("Edit");
+		edit.click(function() {
+			change_percent(username, percent);
+		});
+		var close = $(document.createElement("button"));
+		close.text("Delete");
+		close.click(function() {
+			$.post("../control/ajax_editshare",
+					{ username: username, percent: 0 },
+					function(data) {
+						var json = eval('(' + data + ')');
+						if (json.success) {
+							update_shares();
+						} else {
+							alert(json.error);
+						}
+					});
+			tr.remove();
+		});
+		control.append(edit);
+		control.append(close);
+		tr.append(control);
+	}
+	table.append(tr);
+}
+
+/*
+	Create a block with given username and width for credits or shares
+	and return the block
+	If width is less than 10%, create and append to a "Other" block
+	
+	username: the username for the block
+	width: the width of the block
+	isShare: true if it's in the "shares" bar, false if it's in the "credits" bar
+	
+	return: the block created
+*/
+function create_block(username, width, isShare) {
+	var block = $(document.createElement('td'));
+	block.css({
+		'width': width + '%',
+		'background-color': '#' + color_generator(username)
+	});
+	var percent = $(document.createElement('span'));
+	percent.text(width + '%');
+
+	if (isShare) {
+		block.attr("id", "usage" + username);
+		if (username == "Free" && width > 0) {
+			var get = $(document.createElement('a'));
+			get.attr('id','getresourcesbutton');
+			get.attr('href', 'myvessels');
+			get.text('get');
+			// get.click(get_resources_dialog);
+			block.append(get);
+			
+			/* The following is used for resource sharing (not impl. yet)
+			var share = $(document.createElement('a'));
+			share.attr('id','shareresourcesbutton');
+			share.attr('href','#');
+			share.text('share');
+			share.click(share_resources_dialog);
+			block.append(share);
+			*/
+			
+		} else if (username != "Me" && username != "Others" && username != "Free") {
+			/* we only want to end up here if the block is a share with another user */
+			var close = $(document.createElement('a'));
+			close.attr('href','#');
+			close.text('x');
+			close.click(function() {
+				$.post("../control/ajax_editshare",
+						{ username: username, percent: 0 },
+						function (data) {
+							var json = eval('(' + data + ')');
+							if (json.success) {
+								update_shares();
+							} else {
+								alert(json.error);
+							}
+						});
+			});
+			block.append(close);
+			percent.attr("title", "Click to change percent");
+			percent.tooltip({cssClass:"tooltip"});
+			percent.css("cursor", "pointer");
+			percent.css("text-decoration", "underline");
+			percent.click(function() {
+				change_percent(username, width);
+			});
+		}
+	}
+	
+	if (username == "Others") {
+		percent.attr("title", "Click to reveal");
+		percent.tooltip({cssClass:"tooltip"});
+		percent.css("cursor", "pointer");
+		percent.css("text-decoration", "underline");
+		percent.click(function () { toggle_table(isShare) });
+		// block.attr("id", "creditOthers");
+	}
+	block.append(percent);
+	return block;
+}
+
+
+/*
+	Create a name label with given width for shares or credits bar
+	
+	username: the username for the label
+	width: the width for the label
+	isShare: true if it is in "shares" bar and false if it is in "credits" bar
+	
+	return: the label created
+*/
+function create_label(username, width, isShare) {
+	var label = $(document.createElement('td'));
+	if (isShare) {
+		label.attr("id", "labelusage" + username);
+	}
+	label.text(username);
+	label.css({
+		'width': width + '%'
+	});
+	return label;
+}
+
+/*
+	Generate a color in hex notation for a username, which assigns different
+	colors to different usernames.
+	
+	username: username for generating random colors
+	
+	return: hex representation of the color
+*/
+function color_generator(username) {
+	var seeds = ['cc','ff'];
+	var color = seeds[username.charCodeAt(0) % 2] +
+				seeds[username.charCodeAt(1) % 2] +
+				seeds[username.charCodeAt(username.length - 1) % 2];
+	if (color == "ffffff") {
+		color = "ffffcc";
+	} else if (color == "cccccc") {
+		color = "ccccff";
+	}
+	if (username == "Free") {
+		color = "ffffff";
+	} else if (username == "Me") {
+		color = "cccccc";
+	}
+	return color;
+}
+
+</script>
+
+{% endblock script %}
+
+{% block nav_mygeni %}
+<td class="active"><a href="{% url mygeni %}">My Seattle Clearinghouse</a></td>
+{% endblock nav_mygeni %}
+
+{% block content %}
+	<div id="main">
+		<div id="middle">
+			<div class="bar">
+				<span class="vesselstatus" id="vesselscredits"></span>
+				<h3>My Credits (donated by)</h3>
+				<table class="credits">
+					<tr id="credits"></tr>
+				</table>
+				<table class="names">
+					<tr id="creditnames"></tr>
+				</table>
+				<table id="creditotherstable" class="users">
+					<caption>Other donated resources</caption>
+					<tr class="header">
+						<th>Username</td>
+						<th>Percent</td>
+					</tr>
+				</table>
+			</div>
+		
+			<div class="bar">
+				<span class="vesselstatus" id="vesselsavailable"></span>
+				<span class="vesselstatus" id="vesselsused"></span>
+				<h3>Resource Usage (used by)</h3>
+				<table class="usage">
+					<tr id="usage"></tr>
+				</table>
+				<table class="names">
+					<tr id="usagenames"></tr>
+				</table>
+				<table id="usageotherstable" class="users">
+					<caption>Resource shared by others</caption>
+					<tr class="header">
+						<th>Username</td>
+						<th>Percent</td>
+						<th>Actions</td>
+					</tr>
+				</table>
+			</div>
+					
+			<div id="overlay"></div>
+			<div id="dialogframe">
+				<div id="getresourcesdialog">
+					<span class="vesselstatus"></span>
+					<h3>Get more resources</h3>
+					<span>Number of vessels</span>
+					<select name="num" id="numvessels">
+					</select>
+					<br />
+					<span>Environment</span>
+					<select name="env" id="environment">
+						<option value="1">LAN</option>
+						<option value="2">WAN</option>
+						<option value="3">Random</option>
+					</select>
+					<br />
+					<button class="cancel">Cancel</button>
+					<button id="getresourcesaction">Get</button>
+				</div>
+				<div id="shareresourcesdialog">
+					<h3>Share resources</h3>
+					<span>Username</span>
+					<input id="username" type="text" />
+					<br />
+					<span>Percent</span>
+					<input id="percent" type="text" />
+					<br />
+					<button class="cancel">Cancel</button>
+					<button id="shareresources">Share</button>
+				</div>
+			</div>
+			{% if over_vessel_credits %}
+			<div id="overcreditlimit">
+			  <p>You have acquired {{ over_vessel_credits }} more vessels than we
+			  would normally let you. This usually means that some of your donations
+			  have gone offline.</p>
+			  
+			  <p>We won't remove the extra acquired vessels from your account, but you
+			  won't be able to acquire more vessels or renew your vessels until you
+			  remove or let expire {{ over_vessel_credits }} of them.
+			  (Or, of course, until more donations are made on behalf of your account
+			  or those donations that have gone offline come back online.)</p>
+			</div>
+			{% endif %}
+		</div>
+	</div>
+	
+{% endblock content %}

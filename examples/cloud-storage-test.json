@@ -1,0 +1,6 @@
+{
+	"processes": {"1.1.1.1": "Client", "2.2.2.2": "Server A", "3.3.3.3": "Server B", "4.4.4.4": "Server C"},
+	"events": [
+		{ "time": 0, "type": "send", "process": "1.1.1.1", "recipient": "4.4.4.4", "data": "Session request to C" }
+	]
+}

@@ -1,0 +1,62 @@
+{% extends "common/geni_base.html" %}
+
+{% comment %}
+<Program>
+  control_base.html
+
+<Author>
+  Originally by?:
+  Justin Samuel 2009
+
+  Modified:
+  Gaetano Pressimone 2012
+  
+<Purpose>
+  Django template file which provides the base website look.
+  All pages requiring a logged in user extend this.
+
+<Extends>
+  common/geni_base.html
+
+<Stylesheet>
+  common.css
+  
+<Scripts>
+  jquery.js
+
+<Template Variables>
+  Username:
+    The currently logged in user.
+
+{% endcomment %}
+
+{% block script %}
+<script type="text/javascript" src="{{ MEDIA_URL}}scripts/jquery.js" charset="utf-8"></script>
+{% endblock script %}
+
+{% block navigation %}
+	<div id="navigator">
+		<div id="tabs">
+			<span id="meta">Logged in as {{ username }}, <a class="logout" href="{% url logout %}">Logout</a></span>
+			<table>
+				<tr>
+					{% block nav_profile %}
+            <td><a href="{% url profile %}">Profile</a></td>
+					{% endblock nav_profile %}
+          
+          {% block nav_myvessels %}
+					  <td><a href="{% url myvessels %}">My Vessels</a></td>
+          {% endblock nav_myvessels %}
+
+          {% block nav_getdonations %}
+					  <td><a href="{% url getdonations %}">Get Donations</a></td>
+          {% endblock nav_getdonations %}
+
+		      {% block nav_help %}
+					  <td><a href="{% url help %}">Help</a></td>
+		      {% endblock nav_help %}
+				</tr>
+			</table>
+		</div>
+	</div>
+{% endblock navigation %}

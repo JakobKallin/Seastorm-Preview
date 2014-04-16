@@ -1,0 +1,337 @@
+'''
+Created on Apr 18, 2011
+
+@author: jeffra45
+'''
+
+# List of function names that require an object id.
+OBJ_METHOD_CALLS_SET = set(["file_close", "file_readat", "file_writeat",
+                            "lock_acquire", "lock_release", "socket_close",
+                            "socket_recv", "socket_send",
+                            "udpserver_getmessage",
+                            "udpserver_close", "tcpserver_close",
+                            "tcpserver_getconnection"])
+
+
+
+class ActionNode(object):
+  def __init__(self, action_num):
+    self.action_num = action_num
+    self.children = []
+
+  def is_leaf(self):
+    if self.action_num != -1:
+      return len(self.children) == 0
+    else:
+      return False
+
+  def __str__(self):
+    return self.action_num
+
+
+def _is_model_object(obj):
+  return isinstance(obj, ShimSocketWrapper) or NAMESPACE_OBJ in str(type(obj))
+
+
+
+def create_tree(sigma_list, condition_dict):
+  new_sigma_set = set(sigma_list)
+  status = _create_children(new_sigma_set, condition_dict, ActionNode(-1))
+  #print_tree(start_node)
+  return status
+
+
+
+
+def _remove_element(sigma_set, action_num):
+  new_sigma_set = set(sigma_set)
+  new_sigma_set.discard(action_num)
+  return new_sigma_set
+
+
+
+
+# TODO: This could be cleaned up a bit...
+def _contained_in(aset, bset):
+  # Checks to see if any elements of aset are contained in bset.
+  contains = False
+  for b_val in bset:
+    for a_val in aset:
+      if a_val == b_val:
+        contains = True
+        break
+    if contains:
+      break
+  return contains
+
+
+
+
+def _node_ok(action_num, condition_dict, sigma_set):
+  if action_num in condition_dict and _contained_in(condition_dict[action_num], sigma_set):
+    return False
+  else:
+    return True
+
+
+
+
+def _create_children(sigma_set, condition_dict, start_node):
+  if len(sigma_set) == 0:
+    return True
+
+  for action_num in sigma_set:
+    if _node_ok(action_num, condition_dict, sigma_set):
+      # Try in model!
+      prestate = exec_and_verif_with_model(action_num)
+      if prestate != None:
+        # Okay in model, keep going!
+        new_node = ActionNode(action_num)
+        start_node.children.append(new_node)
+        new_sigma_set = _remove_element(sigma_set, action_num)
+        if not _create_children(new_sigma_set, condition_dict, new_node):
+          # A child node failed, revert and continue.
+          put_global_state_dict(prestate)
+          continue
+        else:
+          # All children are okay, found a good ordering.
+          return True
+      else:
+        continue
+  # Traversed all of simga and could not find a working ordering.
+  return False
+
+
+
+
+def _assert_object(fnc_name, impl_ret):
+  if fnc_name == "tcpserver_getconnection":
+    assert(len(impl_ret) == 3)
+    assert(isinstance(impl_ret, tuple))
+    assert(isinstance(impl_ret[2], ShimSocketWrapper) or NAMESPACE_OBJ in str(type(impl_ret[2])))
+  else:
+    assert(isinstance(impl_ret, ShimSocketWrapper) or NAMESPACE_OBJ in str(type(impl_ret)))
+
+
+
+
+def _get_and_store_obj_mapping(fnc_name, impl_ret, model_ret):
+  
+  if fnc_name == "tcpserver_getconnection":
+    tuple_ip, tuple_port, tuple_socket = impl_ret
+    impl_obj_id = tuple_socket._socket.implid
+    assert(isinstance(model_ret, tuple))
+    assert(len(model_ret) == 3)
+    model_ip, model_port, model_socket = model_ret
+    mycontext['translate_ids'][impl_obj_id] = model_socket
+    
+  else:  
+    # Direct translation from unique impl object id to the newly generated
+    # model object id. This is used to later object instance calls that
+    # must use this new model id.
+    impl_obj_id = impl_ret._socket.implid
+    mycontext['translate_ids'][impl_obj_id] = model_ret
+
+
+
+
+def _verify_model_impl_values(fnc_name, model_ret, impl_ret):
+  # Check for conformance failures.
+  if fnc_name in OBJ_CREATE_CALLS_DICT:
+    if impl_ret == model_ret:
+      return True
+    elif fnc_name is "tcpserver_getconnection":
+      if len(model_ret) != 3 or len(impl_ret) != 3:
+        error_str = fnc_name + " should return tuples of length 3."
+        mycontext['failure_messages'].append(error_str)
+        return False
+      mip, mport, msock = model_ret
+      iip, iport, isock = impl_ret
+      ips = mip == iip
+      ports = mport == iport
+      socks = isinstance(msock, str) and _is_model_object(isock)
+      if not ips:
+        error_str = fnc_name + " action did not return correct ips "
+        error_str += str(model_ret) + ", " + str(impl_ret) + '\n'
+        mycontext['failure_messages'].append(error_str)
+        return False
+
+      elif not ports:
+        error_str = fnc_name + " action did not return correct ports. "
+        error_str += str(model_ret) + ", " + str(impl_ret) + '\n'
+        mycontext['failure_messages'].append(error_str)
+        return False
+
+      elif not socks:
+        error_str = fnc_name + " action did not return correct socket objects. "
+        error_str += str(model_ret) + ", " + str(impl_ret) + '\n'
+        mycontext['failure_messages'].append(error_str)
+        return False
+      
+    elif not isinstance(model_ret, str) or not _is_model_object(impl_ret):
+      error_str = fnc_name + " action does not return correct types. The model should "
+      error_str += "return a string and the impl should return a ModelObject. "
+      error_str += str(model_ret) + ", " + str(impl_ret) + '\n'
+      mycontext['failure_messages'].append(error_str)
+      return False
+    
+  elif fnc_name == "createthread":
+    if not isinstance(model_ret, str) and impl_ret is None:
+      mycontext['failure_messages'].append("create thread should return None.")
+      return False
+  
+  elif fnc_name == "listfiles":
+    if not isinstance(model_ret, list) or not isinstance(impl_ret, list):
+      mycontext['failure_messages'].append("List files should return lists.")
+      return False
+    elif not set(model_ret).issubset(set(impl_ret)):
+      error_str = "Model list files should be a subset of impl list files."
+      mycontext['failure_messages'].append(error_str)
+      return False
+    
+  elif model_ret != impl_ret:
+    log("**\nmodel:", model_ret, "\n**\nimpl:", impl_ret, '\n**\n')
+    return False
+  
+  # All is well!
+  return True
+
+
+
+
+def _verify_model_impl_errors(fnc_name, repy_error, impl_error):
+  if not isinstance(repy_error, type(impl_error)):
+    error_str = "Model/Impl error's do not match: \n"
+    error_str += str(repy_error) + ", " + str(impl_error)
+    mycontext['failure_messages'].append(error_str)
+    return False
+  else:
+    return True
+
+
+
+
+def exec_and_verif_with_model(start_action_num):
+  #pre = getruntime()
+  prestate = get_global_state_dict()
+
+  finish_action_num = mycontext['start_finish_map'][start_action_num]
+  start_action = mycontext['trace_dict'][start_action_num]
+  finish_action = mycontext['trace_dict'][finish_action_num]
+  
+  # Unpack tuple, discard the finish action model func, it is always None.
+  # FYI, the only reason it's there is to keep the lengths of actions constant.
+  num1, fnc_name, start, threadname, obj_id, args_list, model_func = start_action
+  num2, fnc_name2, finish, threadname2, obj_id2, return_val_tuple, _ = finish_action
+
+  # Sanity Checks
+  assert(start == "start")
+  assert(finish == "finish")
+  assert(num1 == start_action_num)
+  assert(num2 == finish_action_num)  
+  assert(fnc_name == fnc_name2)
+  assert(threadname == threadname2)
+  assert(obj_id == obj_id2)
+
+  # Set value for future get via model.
+  impl_ret, impl_error = return_val_tuple
+  oracle_setter(impl_ret, impl_error)
+
+  # Check to see if we are trying to call an object instance method. If so we 
+  # need to retrieve the model id for our object and insert it into our 
+  # arguments list. 
+  if fnc_name in OBJ_METHOD_CALLS_SET:
+    # Copy args so we can modify them.
+    model_args = list(args_list)
+    # Get model object id from map.
+    model_id = mycontext['translate_ids'][obj_id]
+    model_args.insert(0, model_id)
+  else:
+    model_args = args_list
+  
+  # Execute the action in the model.
+  model_ret = repy_error = model_error = None
+  try:
+    model_ret = model_func(threadname, *model_args)
+  except RepyException, repy_error:
+    pass
+  except InternalModelError, model_error:
+    mycontext['failure_messages'].append(model_error)
+    pass
+    
+  # If there was an internal model error then we are done.                                                                                                   
+  if model_error != None:
+    put_global_state_dict(prestate)
+    return None
+
+  # Check to see if we created a new object, if so store new id mapping.
+  # Also make sure there were no repy errors in the model.
+  if fnc_name in OBJ_CREATE_CALLS_DICT and repy_error == None and impl_error == None:
+    _assert_object(fnc_name, impl_ret)
+    _get_and_store_obj_mapping(fnc_name, impl_ret, model_ret)
+  
+  # Verify that the errors are the same, if any.
+  if not _verify_model_impl_errors(fnc_name, repy_error, impl_error):
+    put_global_state_dict(prestate)
+    return None
+  
+  # Verify that the return values match or are otherwise acceptable.
+  if not _verify_model_impl_values(fnc_name, model_ret, impl_ret):
+    put_global_state_dict(prestate)
+    return None    
+    
+  #post = getruntime()
+  #log(post-pre, '\n')
+
+  # The model accepted the action, all is well, return prestate just in case.
+  return prestate
+
+
+
+
+# After each successful verification clear the following data structures.
+def clear_verification_globals():
+  temp_dict = {}
+  temp_dict2 = {}
+  for save in mycontext['pending_actions']:
+    temp_dict[save] = mycontext['condition_dict'][save]
+    temp_dict2[save] = mycontext['trace_dict'][save]
+
+  #for deadid in mycontext['closed_ids']:
+  #  del mycontext['translate_ids'][deadid]
+
+  mycontext['closed_ids'] = []
+  mycontext['condition_dict'] = {}
+  mycontext['condition_dict'] = temp_dict
+  mycontext['start_finish_map'] = {}
+  mycontext['trace_dict'] = {}
+  mycontext['failure_messages'] = []
+  mycontext['trace_dict'] = temp_dict2
+
+  # NEW!
+  mycontext['finished_actions'] = []
+
+
+def disambiguate_and_verify():
+  sigma_list = mycontext['start_finish_map'].keys()  
+  status_okay = create_tree(sigma_list, mycontext['condition_dict'])
+  if status_okay:
+    clear_verification_globals()
+  return status_okay
+
+
+
+"""
+def verification_thread():
+  while mycontext['verif-thread-enabled']:
+    try:
+      mycontext['action_lock'].acquire(True)
+      if len(mycontext['trace_dict']) > SYSTOLIC_LEVELS:
+        status_okay = disambiguate_and_verify()
+        if not status_okay:
+          for fail in mycontext['failure_messages']: log(fail,'\n')
+          raise ModelConformanceFailure("Could not find a valid serialization!")
+    finally:
+      mycontext['action_lock'].release()
+      sleep(.2)
+"""

@@ -1,0 +1,19 @@
+/******************************
+* STYLE FOR CHANGE_KEY PAGE
+*******************************/
+
+h3 {
+    margin-top : 1em;
+}
+
+.keyform {
+    margin : 1em 1em 1em 1em;
+}
+
+#error_msg {
+    background-color : #edd;
+    border : 1px solid #a00;
+    padding : 1em;
+    margin-top : 1em;
+    margin-bottom : 1em;
+}

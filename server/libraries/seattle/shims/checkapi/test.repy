@@ -1,0 +1,25 @@
+dy_import_module_symbols("shimstackinterface")
+
+listen_enabled = True
+shim_object = ShimStackInterface("(CheckApiShim)")
+udpserv = shim_object.listenformessage('127.0.0.1', 12345)
+
+def start_listener():
+  while listen_enabled:
+    try:
+      msg = udpserv.getmessage()
+      log("Recieved Msg:", msg, '\n')
+    except SocketWouldBlockError:
+      pass
+
+createthread(start_listener)
+
+serverip = '127.0.0.1'
+serverport = 12345
+localip = serverip
+localport = 12346
+
+for i in xrange(25):
+  shim_object.sendmessage(serverip, serverport, 'hello', localip, localport)  
+
+listen_enabled = False

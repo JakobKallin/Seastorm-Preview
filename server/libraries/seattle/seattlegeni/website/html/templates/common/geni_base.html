@@ -1,0 +1,58 @@
+{% comment %}
+<Program>
+  geni_base.html
+
+<Author>
+  Originally by?:
+  Justin Samuel 2009
+
+  Modified:
+  Gaetano Pressimone 2012
+  
+<Purpose>
+  Django template file which provides the base website look.
+  All pages extend this.
+
+<Extends>
+  None
+
+<Stylesheet>
+  common.css
+  
+
+<Scripts>
+  None
+
+<Template Variables>
+  None
+
+{% endcomment %}
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<title>{% block title %}Seattle Clearinghouse using Seattle{% endblock title%}</title>
+
+  {% block style %}	
+	  <link href="{{ MEDIA_URL }}css/common.css" rel="stylesheet" type="text/css" />
+  {% endblock style %}
+
+  {% block script %}
+  {% endblock script %}
+	
+</head>
+
+<body>
+  {% block header %}	
+	  <div id="header">
+  		<span id="logo"><a href="{% url profile %}">Seattle Clearinghouse</a></span>
+  		<span id="caption">Formerly known as SeattleGENI.  Learn about <a href="https://seattle.cs.washington.edu">Seattle</a></span>	
+  	</div>
+	{% endblock header%}	
+
+	{% block navigation %}{% endblock navigation %}
+	{% block content %}{% endblock content %}
+
+</body>
+</html>	

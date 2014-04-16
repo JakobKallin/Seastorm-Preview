@@ -1,0 +1,60 @@
+{% extends "control/control_base.html" %}
+
+{% block style %}
+{{ block.super }}
+<link href="{{ MEDIA_URL }}css/change_key.css" rel="stylesheet" type="text/css" />
+{% endblock style %}
+
+{% block title %}
+Change Key - Seattle Clearinghouse
+{% endblock title %}
+
+{% block nav_profile %}
+<td class="active"><a href="{% url profile %}">Profile</a></td>
+{% endblock nav_profile %}
+
+{% block content %}
+	<div id="main">
+		<div id="middle">
+			<h2>Change Your Key</h2>
+
+			<p>You can change the key you use to access your vessels. After you change
+			   your key, it may take a few minutes before you can access all of your vessels
+			   with your new key or see them listed when you browse with
+			   <a href="https://seattle.cs.washington.edu/wiki/SeattleShell" target="_blank">Seash</a>.</p>
+
+			<h3>Upload a public key</h3>
+			
+			{% if error_msg %}
+			      <div id="error_msg">{{ error_msg }}</div>
+			{% endif %}
+			
+			<p>If you have generated a key pair on your own computer (for example,
+			   using Seash), you can upload your <strong>public key</strong> here.
+			   Do not upload your private key.</p>
+			<div class="keyform">
+			<form action="{% url change_key %}" method="post" enctype="multipart/form-data">
+			<input type="file" name="pubkey">
+			<br />
+			<br />
+			<input type="submit" value="Upload Key">
+			</form>
+			</div>
+			
+			<h3>Generate a new key</h3>
+			If you don't want to generate a new key, we can generate a new one for you.
+			After we generate it, you will need to download the public and private keys
+			we generated.
+			
+			<div class="keyform">
+			<form action="{% url change_key %}" method="post">
+			<input type="hidden" name="generate" value="yes">
+			<input type="submit" value="Generate Key">
+			</form>
+			</div>
+		</div>
+	</div>
+
+{% endblock content %}
+
+

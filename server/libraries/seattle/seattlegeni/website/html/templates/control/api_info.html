@@ -1,0 +1,53 @@
+{% extends "control/control_base.html" %}
+
+{% block style %}
+{{ block.super }}
+<link href="{{ MEDIA_URL }}css/api_info.css" rel="stylesheet" type="text/css" />
+{% endblock style %}
+
+{% block title %}
+API Info - Seattle Clearinghouse
+{% endblock title %}
+
+{% block nav_profile %}
+<td class="active"><a href="{% url profile %}">Profile</a></td>
+{% endblock nav_profile %}
+
+{% block content %}
+	<div id="main">
+		<div id="middle">
+			<h2>Seattle Clearinghouse API Info</h2>
+
+			<p>Seattle Clearinghouse offers an XML-RPC interface to perform actions such
+			   as acquiring, releasing, and renewing vessels. To authenticate yourself
+			   using this API you use an API key rather than your account password.</p>
+
+			<p>You don't need to use the XML-RPC interface in order to use Seattle Clearinghouse.
+			   If you'd like to do so, though, take a look at the
+			   <a href="https://seattle.cs.washington.edu/wiki/SeattleGeniClientLib">Seattle Clearinghouse XML-RPC client library</a>.</p>
+
+			<p>Your API key is:
+			
+			<div id="apikey">{{ api_key }}</div>
+			
+			<h3>Changing your API key</h3>
+			In some cases you may want to generate a new API key (for example, if you accidentally
+			left your old one in a file that you shared publicly). Generating a new API key will make
+			your old API key no longer work.
+			
+			{% if msg %}
+			<div id="message">
+			  {{ msg }}
+			</div>
+			{% endif %}
+			
+			<div id="apikeygenform">
+			<form action="{% url api_info %}" method="post">
+			<input type="hidden" name="generate_api_key" value="yes">
+			<input type="submit" value="Generate a new API key">
+			</form>
+			</div>
+		</div>
+	</div>
+
+{% endblock content %}

@@ -1,0 +1,57 @@
+'''
+Created on Apr 17, 2011
+
+@author: jeffra45
+'''
+
+
+def bootstrap_import_filestate(ctx, filename, added_files=None):
+  """
+  <Purpose>
+    Imports a collection of files into the initial state of CheckAPI's model.
+
+  <Arguments>
+    ctx
+      The global context dictionary associated with this instance of CheckAPI
+    filename
+      The name of the file that includes all of the files to import into CheckAPI
+    added_files
+      A list of files that should be added that may not be in the specified file.
+
+  <Exceptions>
+    RepyArgumentError is raised if the filename is invalid.
+
+    FileInUseError is raised if a handle to the file is already open.
+
+    FileNotFoundError is raised if the filename is not found.
+
+  <Side Effects>
+    Imports all files and their contents into CheckAPI's model state.
+    
+  <Resource Consumption>
+    Some number of implementation resources will be used depending on how many 
+    files are being imported into the model.
+    
+  <Returns>
+    None.
+  """
+    
+  try:
+    fd = openfile(filename, False)
+  except RepyException, err:
+    log("Was not able to bootstrap initial file state, encountered the following error:\n")
+    log(err)
+    return
+  
+  bootstrap = fd.readat(None, 0).split('\n')
+  
+  if added_files != None:
+    bootstrap.extend(added_files)
+  
+  for file in set(bootstrap):
+    try: 
+      ctx['fileio_file_state_dict'][file] = openfile(file, False).readat(None, 0)
+    except RepyException, err:
+      log("Was not able to import " + file + ", encountered the following error:\n")
+      log(err)        
+

@@ -1,0 +1,71 @@
+{% extends "common/geni_base.html" %}
+{% comment %}
+<Program>
+  accounts_base.html
+
+<Author>
+  Originally by?:
+  Justin Samuel 2009
+
+  Modified:
+  Gaetano Pressimone 2012
+  
+<Purpose>
+  Django template file which provides the base website look.
+  All pages not requiring a logged in user extend this.
+
+<Extends>
+  common/geni_base.html
+
+<Stylesheet>
+  common.css
+  account.css
+
+<Scripts>
+  jquery.js
+
+<Template Variables>
+  page_top_errors:
+		Error messages to display.
+	
+  form: 
+		New user registration form.  See GeniUserCreationForm in forms.py for more info.
+    .username:
+		.password1: 
+		.password2: 
+    .affiliation:  
+		.email:  
+    .pubkey:  
+    .gen_upload_choice: 
+
+{% endcomment %}
+{% block style %}
+{{ block.super }}
+<link href="{{ MEDIA_URL }}css/account.css" rel="stylesheet" type="text/css" />
+{% endblock style %}
+
+{% block script %}
+<script type="text/javascript" src="{{ MEDIA_URL}}scripts/jquery.js" charset="utf-8"></script>
+{% endblock script %}
+
+{% block navigation %}
+	<div id="navigator">
+		<div id="tabs">
+			<table>
+				<tr>
+				  {% block nav_login %}
+				  <td><a href="{% url login %}">Login</a></td>
+				  {% endblock nav_login %}
+
+				  {% block nav_register %}
+				  <td><a href="{% url register %}">Register</a></td>
+				  {% endblock nav_register %}
+
+				  {% block nav_help %}
+				  <td><a href="{% url accounts_help %}">Help</a></td>
+				  {% endblock nav_help %}
+				</tr>
+			</table>
+		</div>
+	</div>
+{% endblock navigation %}

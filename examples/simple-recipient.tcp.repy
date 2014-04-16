@@ -1,0 +1,10 @@
+def connection_started(remoteip, remoteport, socketlikeobj, thiscommhandle, listencommhandle):
+  while True:
+  	message = socketlikeobj.recv(100)
+  	print 'Received: ' + message
+
+if callfunc == "initialize":
+  mycontext['port'] = 12345 # int(callargs[0])
+  
+  print "Start receive"
+  waitforconn('127.0.0.1', mycontext['port'], connection_started)

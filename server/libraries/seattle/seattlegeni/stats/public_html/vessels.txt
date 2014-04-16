@@ -1,0 +1,4 @@
+# This file is appended to by scripts/update_graph_data.sh.
+# The comma-separated fields are:
+# date, free vessels, acquired vessels, dirty vessels
+# For example: 2009-10-28 15:30,28849,937,3

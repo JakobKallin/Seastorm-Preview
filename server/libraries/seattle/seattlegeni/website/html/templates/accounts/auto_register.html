@@ -1,0 +1,90 @@
+{% extends "accounts/accounts_base.html" %}
+
+{% comment %}
+<Program>
+  auto_register.html
+
+<Author>
+  Originally by:
+  Gaetano Pressimone 2012
+  
+<Purpose>
+  Django template file for Seattle Clearinghouse's 'auto_register' page.  The page 
+  allows a visitor to create a Clearinghouse account quickly if logging in
+  with a OpenID/OAuth account that has not yet been linked with a Seattle Clearinghouse
+  account.
+
+<Extends>
+  accounts/accounts_base.html
+
+<Stylesheet>
+  common.css
+  account.css
+
+<Scripts>
+  None
+
+<Template Variables>
+  backend:
+		An OpenID/OAuth backend ex google,facebook etc.
+  error_msgs:
+
+	username_form:
+
+{% endcomment %}
+
+{% block title %}
+Auto Register - Clearinghouse
+{% endblock title %}
+
+{% block script %}
+{{ block.super }}
+<script type="text/javascript" src="{{MEDIA_URL}}scripts/auto_register.js" charset="utf-8"></script>
+{% endblock script %}
+
+{% block nav_register %}
+<td class="active">Auto Register</td>
+{% endblock nav_register %}
+
+{% block content %}
+    {% csrf_token %}
+    <div id="main">
+		<div id="middle">		
+		  <div id="learn-about-seattle">
+		    This {{backend}} account is not linked with a Seattle Clearinghouse account so we're creating one for you.  Already a user? <a href="{% url login %}">Login</a>
+		  </div>
+<form action="{% url auto_register %}" method="POST"> 
+ {% if username_form.errors %}
+		  <p class="warning2">
+		  Please correct the following:</p>
+		{% endif %}
+		  
+		{% if error_msgs %}
+		  <p class="warning">
+		    {{ error_msgs }}
+		    </br>
+		  </p>
+		{% endif %}
+<table class="login">
+
+	<tr>{% comment %}
+		<td class="key">Username</td>
+    <td class="value"><input type="text" name="username" id="id_username" value=""/></td>
+	{% endcomment %}
+    <td class="key">{{ username_form.username.label_tag }}</td>
+    <td class="value">{{ username_form.username }}</td>
+	  <td>{{username_form.username.errors}}</td>
+  </tr>
+  <tr>
+    <td class= "key"> </td>
+    <td class="value"> <input type="submit" value="Register" />
+			<div id="loading_indicator">
+			  <img src="{{ MEDIA_URL }}images/loading_indicator.gif"/>
+			</div>
+		</td>
+  </tr>
+  </table>
+</form>
+</div>
+</div>
+{% endblock %}

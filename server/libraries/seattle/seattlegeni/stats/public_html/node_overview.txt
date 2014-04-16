@@ -1,0 +1,4 @@
+# This file is appended to by scripts/update_graph_data.sh.
+# The comma-separated fields are:
+# date, active nodes, broken nodes, old version nodes
+# For example: 2009-10-28 15:30,2491,3,0

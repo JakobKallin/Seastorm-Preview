@@ -1,0 +1,4 @@
+# This file is appended to by scripts/update_graph_data.sh.
+# The comma-separated fields are:
+# date, acceptdonation, canonical, movingto_onepercentmanyevents, onepercent_manyevents, v2
+# For example: 2009-11-06 16:00,25,15,12,2461,4493

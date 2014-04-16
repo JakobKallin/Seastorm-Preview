@@ -1,0 +1,59 @@
+
+h2 {
+	margin: 50px auto 5px 0;
+}
+
+h3 {
+	margin: 40px auto 5px 0;
+}
+
+h2 a, h3 a {
+    color: #000;
+}
+
+#toc {
+    float: right;
+    border: 2px solid #999;
+    width: 300px;
+    padding: 10px 15px;
+    background-color: #fff;
+    margin: 10px 30px;
+	font-size: 10pt;
+}
+
+#toc h3 {
+	margin: 10px 0;
+}
+
+#toc ul {
+    margin: 5px 20px;
+}
+
+#toc ul li {
+	line-height: 13pt;
+	margin-bottom: 5px;
+	font-size: 10pt;
+}
+
+ul {
+	margin-left: 40px;
+}
+
+li {
+	line-height: 16pt;
+	margin-bottom: 10px;
+	font-size: 11pt;
+}
+
+p {
+    margin: 10px auto;
+	font-size: 11pt;
+	text-align: justify;
+	line-height: 16pt;
+}
+
+p.footnote {
+	font-size: 10pt;
+	margin: 30px 10px;
+	font-style: italic;
+}

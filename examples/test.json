@@ -1,0 +1,8 @@
+{
+	"processes": ["Process A", "Process B"],
+	"messages": [
+		{ "sender": "Process A", "recipient": "Process B", "departure": 0, "arrival": 5, "contents": "Message 1" },
+		{ "sender": "Process A", "recipient": "Process B", "departure": 1, "arrival": 2, "contents": "Message 2" },
+		{ "sender": "Process B", "recipient": "Process A", "departure": 3, "arrival": 4, "contents": "Message 3" }
+	]
+}

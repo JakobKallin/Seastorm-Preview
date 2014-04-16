@@ -1,0 +1,34 @@
+<html>
+<head>
+<link href="{{ MEDIA_URL }}css/account.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<div class="simpleloginoutter">
+    <br><h2 style="text-align:left"><b>Seattle Clearinghouse Portal Login:</b></h2>
+	  <div id="simplelogininner">
+		  <form method="post" action="https://seattlegeni.cs.washington.edu/geni/accounts/login">
+		  {% if err %}
+		  <p><font color="red">{{ err }}</font></p><br>
+		  {% endif %}
+
+		  <table class="login">
+		    <tr>
+		      <td class="key"> {{ form.username.label_tag }} </td>
+		      <td class="value"> {{ form.username }} </td>
+		    </tr>
+		    <tr>
+		      <td class="key"> {{ form.password.label_tag }} </td>
+		      <td class="value"> {{ form.password }} </td>
+		    </tr>
+		    <tr>
+		      <td class="key"></td>
+		      <td class="value"><input type="submit" value="Login" /></td>
+		      <input type="hidden" name="next" value="{{ next }}" />
+		    </tr>
+		  </table>    
+		  </form>
+	</div>
+
+</div>
+</body>
+</html>

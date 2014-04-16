@@ -1,0 +1,14 @@
+dy_import_module_symbols("shimstackinterface")
+
+shim_object = ShimStackInterface("(LogShim)(CheckApiShim)")
+
+localip = '127.0.0.1'
+localport = 12345
+serverip = 'fail.zenodotus.cs.washington.edu'
+serverport = 12346
+
+# Okay call
+shim_object.sendmessage(localip, serverport, 'hello', localip, localport)
+
+# Bad call!
+shim_object.sendmessage(serverip, serverport, 'hello', localip, localport)

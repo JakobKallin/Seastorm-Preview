@@ -1,0 +1,97 @@
+
+/******************************
+* STYLE FOR MYVESSELS
+*******************************/
+
+#getresources {
+    width: 90%;
+    border: 2px solid #999;
+    margin: 0 auto;
+    background-color: #fff;
+    padding: 10px 0;
+    font-size: 12pt;
+    text-align: center;
+    color: #666;
+}
+
+#getresources #caption {
+    color: #444;
+    font-weight: bold;
+    margin: 0 15px 0 0;
+}
+
+#getresources #user_vessel_info { /* ADDED Aug 2012 */
+    display:inline-block;
+		margin-bottom: 5px;
+}
+
+#getresources #total_vessels { /* ADDED Aug 2012 */
+    position:relative;
+		left:-129px; 
+		padding: 0px 0px 5px 0px;
+		margin: 0px 0px 0px 0px;
+
+}
+
+#getresources #total_donations { /* ADDED Aug 2012 */
+    position:relative;
+		left: 11px; 
+		padding: 0px 0px 5px 0px;
+		margin: 0px 0px 0px 0px;
+}
+
+#getresources form {
+    display : inline;
+		margin-top: 5px; /* ADDED Aug 2012 */
+}
+
+#getresources form input, #getresources form select {
+    margin-right: 10px;
+}
+
+#loading_indicator {
+    display : inline;
+    visibility : hidden;
+}
+
+#loading_indicator img {
+    width : 16px;
+    height : 16px;	
+}
+
+#action_summary {
+    color: red;
+}
+
+#action_detail {
+    color: red;
+    display: none;
+}
+
+#action_other {
+    color: red;
+}
+
+table.vessels {
+    width: 90%;
+    margin: 20px auto;
+    border-spacing: 3px;
+    border: 2px solid #999;
+}
+
+table.vessels tr td {
+    height: 30px;
+    text-align: center;
+}
+    
+table.vessels tr th {
+    font-weight: bold;
+    background-color: #666;
+    color: #fff;
+}
+
+table.vessels tr th a.help {
+    float: right;
+    padding-right: 0.5em;
+    color: #fff;
+}

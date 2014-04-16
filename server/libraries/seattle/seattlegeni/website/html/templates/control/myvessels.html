@@ -1,0 +1,200 @@
+{% extends "control/control_base.html" %}
+
+{% comment %}
+<Program>
+  myvessels.html
+
+<Author>
+  Originally by?:
+  Justin Samuel 2009
+
+  Modified:
+  Gaetano Pressimone Aug 14 2012
+  
+<Purpose>
+  Django template file for Seattle Clearinghouse's 'My Vessels' page.  The page 
+  allows a logged in user to acquire, renew or remove vessels.
+
+<Extends>
+  control/control_base.html
+
+<Stylesheet>
+  common.css
+  myvessels.css
+
+<Scripts>
+  myvessels.js
+
+<Template Variables>
+  username:
+		The currently logged in user.
+	
+  my_vessels: 
+		list of infodicts of the user's currently acquired vessels.
+    .node_ip:  last known ip
+		.node_port:  last known port
+		.vessel_id:  vessel name
+    .node_id:  identifer for the node that the vessel is on
+		.handle:  node id + ":" + vessel name
+    .is_active:  whether the node is active
+    .expires_in_seconds: expiration time, in seconds, for the vessel
+
+  num_vessels: 
+		Length of my_vessels list.
+
+  sh_vessels: 
+		List of shared vessels that are used by other but which belong to this user.
+
+  get_form:
+		The form to acquire vessels.  See forms.py for more info.
+    .num: Number of acquirable vessels.
+    .env: Environmental variables (example WAN, LAN, NAT, Random).
+
+  action_summary: 
+		Generic error message.
+
+  action_detail: 
+		Detailed error message. 
+
+  my_donations:
+		The number of donations the user has.
+
+  my_max_vessels:
+		The remaining number of vessels a user may acquire
+    (the total amount - currently acquired = my_max_vessels)
+
+  free_vessel_credits:
+		The number of free credits granted to the user.
+
+  total_vessel_credits: 
+		The total number of vessels the user is allowed to acquire,
+    regardless of how many they currently have.
+
+  remove_summary:
+  	Error message related to removing vessels.
+
+{% endcomment %}
+
+{% block title %}
+My Vessels - Seattle Clearinghouse
+{% endblock title %}
+
+{% block style %}
+{{ block.super }}
+<link href="{{ MEDIA_URL }}css/myvessels.css" rel="stylesheet" type="text/css" />
+{% endblock style %}
+
+{% block script %}
+{{ block.super }}
+<script type="text/javascript" src="{{ MEDIA_URL }}scripts/myvessels.js" charset="utf-8"></script>
+{% endblock script %}
+
+{% block nav_myvessels %}
+<td class="active"><a href="{% url myvessels %}">My Vessels</a></td>
+{% endblock nav_myvessels %}
+
+{% block content %}
+	<div id="main">
+		<div id="middle">
+			<div id="getresources">
+				<span id="user_vessel_info">
+				<span id="total_vessels"> Total vessels available : {{ total_vessel_credits }}
+				<img src="{{ MEDIA_URL }}images/help-icon.png" title="Each user is gifted {{ free_vessel_credits }} vessels. In addition to these, each 
+donation on your behalf grants 10 vessels. 
+{{free_vessel_credits}} + ({{my_donations  }} * 10) = {{ total_vessel_credits }}"></img> </span>
+				<span id="total_donations"> Total<a href="{% url getdonations %}"> donations </a>: {{my_donations}}</span> 
+				</span>
+			<br/>
+				{% ifnotequal get_form None %}
+				<form method="POST" action="{% url get_resources %}">
+				  <span id="caption">Get more resources</span>
+					<font color="red">	{{ get_form.num.errors }}</font>
+					<font color="red">	{{ get_form.env.errors }}</font>
+					<span>Number of vessels</span>
+					{{ get_form.num }}
+					<span>Environment</span>
+					{{ get_form.env }}
+					<input type="submit" value="Get" />
+				</form>
+				<div id="loading_indicator">
+				  <img src="{{ MEDIA_URL }}images/loading_indicator.gif"/>
+				</div>
+			  {% else %}
+			  <div id="action_other"> Donate more nodes to acquire more resources. </div>
+			  {% endifnotequal %}
+				
+			  {% ifnotequal action_summary "" %}
+				<div id="action_summary"> {{ action_summary }} </div>
+			  {% endifnotequal %}
+			  
+			  {% ifnotequal action_detail "" %}
+				<div id="action_summary"> Details:  {% autoescape off %} {{ action_detail }} {% endautoescape %} </div>
+			  {% endifnotequal %}
+				
+				{% ifnotequal remove_summary "" %}
+				<div id="action_summary"> {{ remove_summary }} </div>
+				{% endifnotequal %}
+			</div>
+			<table class="vessels">
+				<tr class="odd">
+					{% ifnotequal num_vessels 0 %}
+					  <th>
+					  <form method="POST" action="{% url del_all_resources %}">
+						<input type="submit" value="remove all"> </input>
+					  </form>
+					  </th>
+					{% endifnotequal %}
+					{% url help as help %}
+					<th>Vessel Location</th>
+					<th>Vessel Name <a class="help" href="{{ help }}#myvessels" title="For each vessel that you acquire, you will see an entry in the table with the vessel location (denoted by its IP address) and vessel name. This is the name that seash will display when you browse your vessels."><img src="{{ MEDIA_URL }}images/help-icon.png" ></img></a></th>
+					<th>Expires In</th>
+					{% ifnotequal num_vessels 0 %}
+					  <th>
+					  <form method="POST" action="{% url renew_all_resources %}">
+						<input type="submit" value="renew all"> </input>
+					  </form>
+					  </th>
+					{% endifnotequal %}
+				</tr>
+			{% if my_vessels %}
+				{% for vessel in my_vessels %}
+  				<tr class="{% cycle 'odd' 'even' %}">
+  					<td>
+  					  <form method="POST" action="{% url del_resource %}">
+  				    	<input type="image" src="{{ MEDIA_URL }}images/delete.png" alt="Remove" />
+  				    	<input type="hidden" name="handle" value="{{ vessel.handle }}" />
+  					  </form>
+  					</td>
+  					{% if vessel.is_active %}
+  					<td><b> {{ vessel.node_ip }} </b></td>
+					{% else %}
+					<td><b> <span style="background-color: #FF0033" title="This node has become inactive and the server is unable to communicate with it.">
+						{{ vessel.node_ip }} </span></b></td>
+					{% endif %}
+  					<td> {{ vessel.vessel_id }} </td>
+  					<td> {{ vessel.expires_in }} </td>
+  					<td>
+  					  <form method="POST" action="{% url renew_resource %}">
+  				    	<input type="image" src="{{ MEDIA_URL }}images/reload.png" alt="Renew" />
+  				    	<input type="hidden" name="handle" value="{{ vessel.handle }}" />
+  					  </form>
+  					</td>
+  				</tr>
+  				{% endfor %}
+  			{% else %}
+				<tr class="even"><td colspan="3">You have no acquired resources<td></tr>
+  			{% endif %}
+				
+			</table>
+			{% ifnotequal num_vessels 0 %}
+			<table class="vessels">
+			  <tr class="even">
+			    <td colspan="4">Total <i>{{ num_vessels }}</i> acquired vessel(s).</td>
+			  </tr>
+			</table>
+			{% endifnotequal %}
+		</div>
+	</div>
+
+{% endblock content %}
+

@@ -1,0 +1,57 @@
+'''
+Created on Apr 11, 2011
+
+@author: jeffra45
+
+<Usage>
+  python repy.py <restrictions file> encasementlib.repy dylink.repy check_api2.repy <program under test>
+
+'''
+
+# Display debugging information during execution.
+DEBUG = False
+
+# Write out the entire trace to a file instead of discarding it.
+WRITE_OUT_TRACE = False
+OUTPUT_TRACE_FILE = "checkapi_trace.output"
+if WRITE_OUT_TRACE:
+    dy_import_module_symbols("check_api_output_file.repy")
+
+# Systolic verification constant, keep only N levels of state at any given time.
+# If constant is set to None, this implies infinite levels.
+SYSTOLIC_LEVELS = 1
+
+# Flag to tell the model if we are using it as a simulator or having it validate
+# implementation values.
+MODEL_SIMULATE = False
+
+# Should we use the current restrictions? This was added so that we could use
+# Repy portability since it does not support restrictions.
+ENABLE_RESTRICTIONS = False
+
+# Various global state/methods used throughout CheckAPI.
+dy_import_module_symbols("check_api_model_state.repy")
+
+# Various exceptions that are used throughout CheckAPI.
+dy_import_module_symbols("check_api_exceptions.repy")
+
+# Setter/Getter mechanism for CheckAPI.
+dy_import_module_symbols("check_api_oracle_setter_getter.repy")
+
+# Include helper modules.
+dy_import_module_symbols("deep_copy.repy")
+dy_import_module_symbols("math.repy")
+dy_import_module_symbols("librepyrandom.repy")
+dy_import_module_symbols("random.repy")
+
+# Include the core model itself.
+dy_import_module_symbols("core_model_resource.repy")
+dy_import_module_symbols("core_model_time.repy")
+dy_import_module_symbols("core_model_thread.repy")
+dy_import_module_symbols("core_model_fileio.repy")
+dy_import_module_symbols("core_model_networking.repy")
+dy_import_module_symbols("core_model_misc.repy")
+
+dy_import_module_symbols("systolic_verification.repy")
+
+dy_import_module_symbols("runtime_verification_shim.repy")

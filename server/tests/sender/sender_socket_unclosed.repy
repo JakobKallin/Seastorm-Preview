@@ -1,0 +1,6 @@
+def main():
+  socket = openconnection('127.0.0.1', 12346, '127.0.0.1', 12345, 2)
+  socket.send('hello')
+  sleep(2)
+
+main()

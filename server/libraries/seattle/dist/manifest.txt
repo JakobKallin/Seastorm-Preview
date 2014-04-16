@@ -1,0 +1,65 @@
+This file describes the purpose of every file in this directory and the
+general purpose of every subdirectory.
+
+=files=
+==clean_folder.py==
+Used by the base installer builder to make sure that only the right files are
+included in the base installers, this scripts is designed to be imported and
+used to check that a certain directory structure follows specified guidelines.
+
+==final_files.fi==
+Describes the structure of the base installers as they should be when they are
+finished, passed as input to clean_folder.py by the base installer builder.
+
+==initial_files.fi==
+Describes the structure of the base installers as they should be at a halfway
+point, to make sure there are no errors before one of the installer building
+steps. Passed as input to clean_folder.py by the base installer builder.
+
+==seattleinstaller.py==
+The script that installs seattle repy on any supported operating system. It
+is included in the installers by the base installer builder.
+
+==make_base_installers.py==
+The base installer builder, it can be imported or run from the command line to
+generate installers which are complete except for custom vessel information 
+("base installers").
+
+==manifest.txt==
+This file, it sums up the purpose of all the other files and subdirectories in the
+current directory.
+
+==nodeman.cfg==
+A static file needed by the installers, it is included in the installers by
+the base installer builder.
+
+==resources.offcut==
+A static file needed by the installers, it is included in the installers by
+the base installer builder.
+
+==update_and_build.py==
+Used to push out a new release, this script can be run from the command line
+to make new base installers, put them in the web directory, and push an update
+to all the software updaters, using the current code in the repository.
+
+==update_software.py==
+This script can be run from the command line to push an update to all the
+software updaters, using the current code in the repository.
+
+=subdirectories=
+==linux==
+Contains scripts, etc. relevant to the linux installers specifically.
+
+==mac==
+Conatins scripts, etc. relevant to the mac installers specifically.
+
+==updater_keys==
+Contains a public and private key that can be used for building test
+installers, but should not be used for real installers, since they
+are publicly viewable in the repository.
+
+==win==
+Contains scripts, etc. relevant to the windows installers specifically.
+
+==winmob==
+Contains scripts, etc. relevant to the Windows Mobile installers specifically.

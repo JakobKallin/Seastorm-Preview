@@ -1,0 +1,10 @@
+{
+	"folders":
+	[
+		{
+			"path": ".",
+			"folder_exclude_patterns": ["mocha", "expect", "libraries", "demokit", "requests"],
+			"file_exclude_patterns": ["*.test.repy"]
+		}
+	]
+}

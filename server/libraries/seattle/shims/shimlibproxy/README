@@ -1,0 +1,56 @@
+    ___  _     _           _ _ _
+   /   \| |   (_)         | (_) |
+   \ |_/| |__ | |_________| | | |__  _ __  _ _  ___._  _.__    __
+    \ \ |  _ \| /  _   _  \ | | '_ \| '_ \| '_|/ _ \ \/ /\ \  / /
+   /-|_\| | | | | | | | | | | | |_) | |_) | |  '(_) |  |  \ \/ /
+   \___/|_| |_|_|_| |_| |_|_|_|_.__/| .__/|_|  \___/_/\_\  |  /
+                                    |_|                   /__/
+
+   Monzur Muhammad <monzum@cs.washington.edu>
+
+
+
+1. OVERVIEW
+   When developing networking application, the software developer has to take 
+   into account the various network environments in order to ensure that the
+   application runs smoothly. However this is a quite difficult task as it is
+   hard to take into account every single network situations. Shims framework
+   allows developers to use existing shims or write their own shims to easily
+   address difficulties that may arise in different networking environments.
+
+   There are already many pre-existing applications that are commonly used,
+   which do not have shims implemented. The Shims proxy allows an user to 
+   easily configure legacy applications to ensure that the application uses
+   shims for network connectivity. In order to do this, the variable
+   LD_PRELOAD will have to be set with the libnetworkinterpose.so library file.
+
+2. OBTAINING SOFTWARE
+   Latest version of libnetworkinterpose.so can be checked out from the svn at
+   https://seattle.cs.washington.edu/svn/seattle/branches/repy_v2/shims/shimlibproxy/
+
+3. BUILDING BINARIES
+   Simply run make from the command line when you are in the shimlibproxy/ 
+   directory.
+
+4. INSTALLATION
+   Once the library file has been compiled, simply copy over the library file
+   libnetworkinterpose.so to a directory where you want to store it. If you
+   are l33t enough to have root priviledges on the machine you can follow the
+   system-wide configuration below.
+
+5. PER-USER CONFIGURATION
+   If you want to load the libnetworkinterpose.so for your application in order
+   to enable shims for a legacy application, you must modify the LD_PRELOAD
+   variable in order to let glibc know which libraries to pre-load for your 
+   application. 
+
+   EXAMPLE
+   $ export LD_PRELOAD
+   $ LD_PRELOAD=/path/to/libnetworkinterpose.so
+   $ gethostip www.google.com
+
+6. SYSTEM-WIDE-CONFIGURATIOn
+   Coming soon...
+
+
+

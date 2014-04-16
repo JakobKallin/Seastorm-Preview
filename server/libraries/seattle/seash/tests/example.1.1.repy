@@ -1,0 +1,5 @@
+if callfunc == 'initialize':
+  if not callargs[0] == "test_argument":
+    raise Exception("incorrect argument")
+  else:
+    print "Hello World"

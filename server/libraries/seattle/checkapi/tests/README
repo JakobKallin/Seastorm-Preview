@@ -1,0 +1,9 @@
+Additionally the standard repy_v2 unit tests can be used with some minor exceptions.
+Details on the specific exceptions are discussed on the CheckAPI wiki:
+
+https://seattle.cs.washington.edu/wiki/CheckAPI
+
+These tests can be run by putting them in the same directory as a working 
+version of CheckAPI and then executing each one with the following command:
+
+python repy.py <RESTRICTIONS_FILE> encasementlib.repy dylink.repy test_core_model_<NAME>

@@ -1,0 +1,9 @@
+mycontext['port'] = int(callargs[0])
+
+log('Start receive')
+socket = listenformessage(getmyip(), mycontext['port'])
+while True:
+  try:
+    message = socket.getmessage()
+  except SocketWouldBlockError:
+    pass

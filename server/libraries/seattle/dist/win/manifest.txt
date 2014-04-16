@@ -1,0 +1,21 @@
+This file describes the purpose and usage of each file in the current
+directory and summarizes the purpose of any subdirectories.
+
+=files=
+==manifest.txt==
+This file (see description at top).
+
+==partial_win.zip==
+A zip file used in the creation of the Windows base installers which
+contains a bare bones Windows python installation that is bundled
+with the Windows installers.
+
+==python_info.txt==
+Describes the steps that were taken to cut down the size of the python
+installation in partial_win.zip.
+
+=subdirectories=
+==scripts==
+Contains scripts that are used in the Windows installer. All the files
+located in here will be included in the base installers by the base
+installer builder.

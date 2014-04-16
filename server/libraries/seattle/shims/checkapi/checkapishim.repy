@@ -1,0 +1,181 @@
+"""
+<Program Name>
+  check_api_shim.repy
+
+<Author>
+  Jeff Rasley, jeffra45@cs.washington.edu
+
+<Date Started>
+  June 17, 2011
+
+<Purpose> 
+  Ensure that shims obey proper Repy semantics.
+"""
+
+dy_import_module_symbols("check_api_shim_helper")
+
+class CheckApiShim(BaseShim):
+
+
+  def sendmessage(self, destip, destport, message, localip, localport):
+    fnc_name = "sendmessage"
+    args_list = [destip, destport, message, localip, localport]
+
+    model_func = model_sendmessage
+    impl_func = self.get_next_shim_layer().sendmessage
+
+    sent = exec_model_impl(fnc_name, getthreadname(), model_func, impl_func, 
+                           args_list, self)
+
+    return sent
+
+
+  def listenformessage(self, localip, localport):
+    fnc_name = "listenformessage"
+    args_list = [localip, localport]
+
+    model_func = model_listenformessage
+    impl_func = self.get_next_shim_layer().listenformessage
+
+    sock = exec_model_impl(fnc_name, getthreadname(), model_func, impl_func, 
+                           args_list, self)
+
+    return sock
+
+
+
+  def openconnection(self, destip, destport, localip, localport, timeout):
+    fnc_name = "openconnection"
+    args_list = [destip, destport, localip, localport, timeout]
+
+    impl_func = self.get_next_shim_layer().openconnection
+    model_func = model_openconnection
+    
+    sock = exec_model_impl(fnc_name, getthreadname(), model_func, impl_func, 
+                           args_list, self)
+
+    return sock
+
+
+
+  def listenforconnection(self, localip, localport):
+    fnc_name = "listenforconnection"
+    args_list = [localip, localport]
+
+    impl_func = self.get_next_shim_layer().listenforconnection
+    model_func = model_listenforconnection
+
+    sock = exec_model_impl(fnc_name, getthreadname(), model_func, impl_func, 
+                           args_list, self)
+
+    return sock
+
+
+
+  def socket_close(self, socket):
+    fnc_name = "socket_close"
+    model_func = model_socket_close
+    impl_func = self.get_next_shim_layer().socket_close
+    args_list = []
+    implid = socket.implid
+
+    value = exec_model_impl(fnc_name, getthreadname(), model_func, impl_func, 
+                            args_list, self, implid, socket)
+
+    return value
+
+
+
+
+  def socket_send(self, socket, msg):
+    fnc_name = "socket_send"
+    model_func = model_socket_send
+    impl_func = self.get_next_shim_layer().socket_send
+    args_list = [msg]
+    implid = socket.implid
+
+    value = exec_model_impl(fnc_name, getthreadname(), model_func, impl_func, 
+                            args_list, self, implid, socket)
+
+    return value
+
+
+
+
+  def socket_recv(self, socket, bytes):
+    fnc_name = "socket_recv"
+    model_func = model_socket_recv
+    impl_func = self.get_next_shim_layer().socket_recv
+    args_list = [bytes]
+    implid = socket.implid
+
+    value = exec_model_impl(fnc_name, getthreadname(), model_func, impl_func, 
+                            args_list, self, implid, socket)
+
+    return value
+
+
+
+  def tcpserversocket_getconnection(self, tcpserversocket):
+    fnc_name = "tcpserver_getconnection"
+    model_func = model_tcpserver_getconnection
+    impl_func = self.get_next_shim_layer().tcpserversocket_getconnection
+    args_list = []
+    implid = tcpserversocket.implid
+
+    value = exec_model_impl(fnc_name, getthreadname(), model_func, impl_func, 
+                            args_list, self, implid, tcpserversocket)
+
+    return value
+  
+
+
+  def tcpserversocket_close(self, tcpserversocket):
+    fnc_name = "tcpserver_close"
+    model_func = model_tcpserver_close
+    impl_func = self.get_next_shim_layer().tcpserversocket_close
+    args_list = []
+    implid = tcpserversocket.implid
+
+    value = exec_model_impl(fnc_name, getthreadname(), model_func, impl_func, 
+                            args_list, self, implid, tcpserversocket)
+    
+    return value
+ 
+
+
+  def udpserversocket_getmessage(self, udpserversocket):
+    fnc_name = "udpserver_getmessage"
+    model_func = model_udpserver_getmessage
+    impl_func = self.get_next_shim_layer().udpserversocket_getmessage
+    args_list = []
+    implid = udpserversocket.implid
+
+    value = exec_model_impl(fnc_name, getthreadname(), model_func, impl_func, 
+                            args_list, self, implid, udpserversocket)
+    
+    return value
+
+
+
+  def udpserversocket_close(self, udpserversocket):
+    fnc_name = "udpserver_close"
+    model_func = model_udpserver_close
+    impl_func = self.get_next_shim_layer().udpserversocket_close
+    args_list = []
+    implid = udpserversocket.implid
+
+    value = exec_model_impl(fnc_name, getthreadname(), model_func, impl_func, 
+                              args_list, self, implid, udpserversocket)
+    
+    return value
+
+
+  def copy(self):
+    return CheckApiShim(self.shim_context['shim_stack'].copy(), 
+                        self.shim_context['optional_args'])
+
+
+  
+  def get_advertisement_string(self):
+    return '(CheckApiShim)' + self.get_next_shim_layer().get_advertisement_string()

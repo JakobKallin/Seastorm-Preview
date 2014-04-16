@@ -1,0 +1,61 @@
+def send_message(message, ip):
+  sendmess(ip, mycontext['port'], message)
+
+def call_for_election():
+  for ip in mycontext['all_ips']:
+    if ip > getmyip():
+      send_message('election', ip)
+  takeover_after_delay()
+
+def takeover_after_delay():
+  # The leader will attempt a takeover after every election, so prevent him from
+  # spamming with "coordinator messages".
+  if 'takeover_timer' in mycontext:
+    canceltimer(mycontext['takeover_timer'])
+  mycontext['takeover_timer'] = settimer(5, takeover, [])
+
+def takeover():
+  stopcomm(mycontext['commhandle'])
+  for ip in mycontext['all_ips']:
+    if ip != getmyip():
+      send_message('coordinator', ip)
+
+def message_received(sender_ip, sender_port, message, commhandle):
+  if message == 'election' and mycontext['competing']:
+    election_message_received_from(sender_ip)
+  elif message == 'takeover' and mycontext['competing']:
+    takeover_message_received()
+  elif message == 'coordinator':
+    coordinator_message_received()
+
+def election_message_received_from(sender_ip):
+  if getmyip() > sender_ip:
+    send_message('takeover', sender_ip)
+    call_for_election()
+
+def takeover_message_received():
+  if 'takeover_timer' in mycontext:
+    canceltimer(mycontext['takeover_timer'])
+  mycontext['competing'] = False
+
+def coordinator_message_received():
+  if 'takeover_timer' in mycontext:
+    canceltimer(mycontext['takeover_timer'])
+  stopcomm(mycontext['commhandle'])
+
+if callfunc == 'initialize':
+  mycontext['port'] = int(callargs[0])
+  
+  # [lowest_ip, ..., highest_ip]
+  mycontext['all_ips'] = callargs[1:]
+  mycontext['all_ips'].sort()
+  
+  mycontext['competing'] = True
+  
+  # We arbitrarily choose the process with the lowest IP to send the first
+  # election message, to get as many messages sent as possible.
+  if getmyip() == mycontext['all_ips'][0]:
+    # Delay for a few seconds so that the other processes can start.
+    settimer(5, call_for_election, [])
+  
+  mycontext['commhandle'] = recvmess(getmyip(), mycontext['port'], message_received)

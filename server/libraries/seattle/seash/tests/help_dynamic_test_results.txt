@@ -1,0 +1,74 @@
+
+Displays information regarding the current state of Seattle, depending on
+the additional keywords that are passed in.
+
+  (*) No need to update prior, the command contacts the nodes anew
+
+show advertise     -- Shows whether the node manager will advertise the 
+                      vessel's keys in the advertise services.
+show files         -- Display a list of files in the vessel (*)
+show hostname      -- Display the hostnames of the nodes
+show identities    -- Display the known identities
+show info          -- Display general information about the vessels
+show ip [to file]  -- Display the ip addresses of the nodes
+show keys          -- Display the known keys
+show log [to file] -- Display the log from the vessel (*)
+show offcut        -- Display the offcut resource for the node (*)
+show ownerinfo     -- Display owner information for the vessels
+show resources     -- Display the resources / restrictions for the vessel (*)
+show targets       -- Display a list of targets
+show timeout       -- Display the timeout for nodes
+show uploadrate    -- Display the upload rate which seash uses to estimate the 
+                      required time for a file upload
+show users         -- Display the user keys for the vessels
+
+Commands from the modules module:
+show modules -- Shows basic information about all installed modules.
+
+
+Displays information regarding the current state of Seattle, depending on
+the additional keywords that are passed in.
+
+  (*) No need to update prior, the command contacts the nodes anew
+
+show advertise     -- Shows whether the node manager will advertise the 
+                      vessel's keys in the advertise services.
+show files         -- Display a list of files in the vessel (*)
+show hostname      -- Display the hostnames of the nodes
+show identities    -- Display the known identities
+show info          -- Display general information about the vessels
+show ip [to file]  -- Display the ip addresses of the nodes
+show keys          -- Display the known keys
+show log [to file] -- Display the log from the vessel (*)
+show offcut        -- Display the offcut resource for the node (*)
+show ownerinfo     -- Display owner information for the vessels
+show resources     -- Display the resources / restrictions for the vessel (*)
+show targets       -- Display a list of targets
+show timeout       -- Display the timeout for nodes
+show uploadrate    -- Display the upload rate which seash uses to estimate the 
+                      required time for a file upload
+show users         -- Display the user keys for the vessels
+
+Commands from the geoip module:
+show coordinates -- Display the latitude & longitude of the node
+show location    -- Display location information (countries) for the nodes
+
+Commands from the modules module:
+show modules -- Shows basic information about all installed modules.
+
+
+show location
+
+Uses a geo-IP location service to return information about the position of the
+nodes in the current group.
+
+Example:
+exampleuser@browsegood !> show ip
+192.x.x.2
+193.x.x.42
+219.x.x.62
+exampleuser@browsegood !> show location
+%1(192.x.x.2): Location unknown
+%3(193.x.x.42): Cesson-svign, France
+%4(219.x.x.62): Beijing, China
+

@@ -1,0 +1,212 @@
+# Instructions for the clean_folder.py program to clean up the folder
+# created by preparetest
+# A file on a line starting with 'req' will be required
+# in the folder or an error message will print.
+# If 'req' is followed by a comma-separated series of filenames,
+# at least one of those files with be required.
+# A file on a line starting with 'del' will be deleted.
+# You may use wildcards: * for any number of characters, 
+# ? for exactly one
+
+del *.pyc
+del *.mix
+del *.publickey
+del *.privatekey
+del foo.py
+del foowrite.py
+del generatekeys.py
+del newvessel.resources
+del softwareupdater.logfile
+del key_daemon.repy
+del key_daemon_parser.repy
+del nm_remote_api.py
+del rhizoma.py
+del *_repy.py
+
+del private_wrapper.repy
+del private_encasementlib.repy
+del dnscommon.repy
+del struct.repy
+del advertise_test_routine.repy
+del private_hideprivate_layer.repy
+
+
+
+
+req domainnameinfo.repy
+req benchmark_resources.py
+req Mac_BSD_resources.py
+req create_installer_state.py
+req measuredisk.py
+req vessel.restrictions
+req Linux_resources.py
+req measure_random.py
+req Win_WinCE_resources.py
+req time_interface.repy
+req advertise.repy
+req centralizedadvertise.repy
+req checkpythonversion.py
+req command_callbacks.py
+req daemon.py
+req emulcomm.py
+req emulfile.py
+req emulmisc.py
+req emultimer.py
+req fakelinecache.py
+req fastnmclient.py
+req fastsigneddata.py
+req httpretrieve.repy
+req httpserver.repy
+req idhelper.py
+req loggingrepy.py
+req math.repy
+req namespace.py
+req nanny.py
+req nmadvertise.py
+req nmclient.repy
+req nmconnectionmanager.py
+req nminit.py
+req nmmain.py
+req nmrequesthandler.py
+req nmresourcemath.py
+req nmstatusmonitor.py
+req nonportable.py
+req persist.py
+req random.repy
+req repy.py
+req repy_constants.py
+req repyhelper.py
+req repyportability.py
+req repypp.py
+req rsa.repy
+req safe.py
+req safe_check.py
+req seash.py
+req seash_dictionary.py
+req seash_exceptions.py
+req seash_global_variables.py
+req seash_helper.py
+req seash_modules.py
+req serialize.repy
+req servicelogger.py
+req servicelookup.repy
+req session.repy
+req sha.repy
+req signeddata.repy
+req sockettimeout.repy
+req softwareupdater.py
+req statusstorage.py
+req tab_completer.py
+req time.repy
+req tracebackrepy.py
+req createnodekeys.py
+req runonce.py
+req writemetainfo.py
+req parallelize.repy
+req windows_api.py
+req win_cpu_nanny.py
+req uniqueid.repy
+req timeout_xmlrpclib.py
+req listops.repy
+req xmlrpc_server.repy
+req darwin_api.py
+req urllib.repy
+req linux_api.py
+req freebsd_api.py
+req base64.repy
+req xmlrpc_common.repy
+req pycryptorsa.repy
+req getvesselresources.repy
+req semaphore.repy
+req xmlparse.repy
+req argparse.repy
+req urlparse.repy
+req repyunit.repy
+req tcp_time.repy
+req ntp_time.repy
+req xmlrpc_client.repy
+req nix_common_api.py
+req cv.repy
+req nmAPI.py
+req nmrestrictionsprocessor.py
+req nmstatusinterface.py
+req nmthreadingerror.py
+req freebsd_kinfo.py
+req md5py.repy
+req binascii.repy
+req sshkey_paramiko.repy
+req sshkey.repy
+req textops.py
+req deserialize.repy
+req Multiplexer.repy
+req harshexit.py
+req portable_popen.py
+req seattleinstaller.py
+req seattleuninstaller.py
+req update_crontab_entry.py
+req virtual_namespace.py
+req dylink.repy
+req loggingrepy_core.py
+req safe_eval.repy
+req strace.py
+req stop_all_seattle_processes.py
+req geoip_client.repy
+req priority_queue.repy
+req centralizedadvertise_v2.repy
+req udpcentralizedadvertise.repy
+req readline_windows.py
+req pyreadline
+
+# Files added during install build:
+req metainfo
+req resources.offcut
+req nodeman.cfg
+
+
+req advertise_objects.repy
+req advertiseserver_v2.repy
+req convert_print_to_log.sh
+req doradvertise.repy
+req dylink_portability.py
+req dylinkrun.py
+req encasementlib.repy
+req exception_hierarchy.py
+req librepyfile.repy
+req librepyrandom.repy
+req librepy.repy
+req librepyrunloop.repy
+req librepysocket.repy
+req librepythread.repy
+req pydes.repy
+req README.txt
+req registerhttpcallback.repy
+req repyV1
+req repyV2
+req resource_constants.py
+req resourcemanipulation.py
+req secureadvertise_client.repy
+req secureadvertise_server.repy
+req secureclient.repy
+
+# Affix additions 
+
+
+req restrictions.advertiseserver
+req affixstackinterface.repy
+req affix_lock_wrapper.py
+req nat_forwarder_common_lib.repy
+req opendhtadvertise.repy
+req affix_exceptions.repy
+req baseaffix.repy
+req natlayer_rpc.repy
+req affix_stack.repy
+req affixpythoninterface.py
+req affixmisc.repy
+req legacyaffix.repy
+req nat_advertisement.repy
+req noopaffix.repy
+req affix_wrapper_lib.repy
+req wrapper.repy
+req natpunchaffix.repy
+req natdecideraffix.repy
+req coordinationaffix.repy

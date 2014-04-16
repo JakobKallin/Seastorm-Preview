@@ -1,0 +1,15 @@
+def send_message():
+  mycontext['messages_sent'] += 1
+  message = 'This is message number ' + str(mycontext['messages_sent'])
+  print 'Sent: ' + message
+  mycontext['socket'].send(message)
+  settimer(5, send_message, [])
+
+if callfunc == 'initialize':
+  mycontext['other_ip'] = '127.0.0.1' # callargs[1]
+  mycontext['port'] = 12345 # int(callargs[0])
+  mycontext['messages_sent'] = 0
+  mycontext['socket'] = openconn(mycontext['other_ip'], mycontext['port'])
+  
+  print "Start send"
+  send_message()

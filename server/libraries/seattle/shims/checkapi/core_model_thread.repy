@@ -1,0 +1,282 @@
+"""
+<Program Name>
+  core_model_thread.repy
+
+<Author>
+  Jeff Rasley
+  jeffra45@cs.washington.edu
+
+<Purpose>
+  Thread model for Repy Core Model. Used to model the following API calls:
+    createlock
+    lock_acquire
+    lock_release
+    createthread
+    getthreadname
+"""
+
+
+
+
+# Unique identifier for thread names and counts.
+thread_name_prefix = '_EVENT:Thread:'
+#thread_count = mycontext['threading_thread_count']
+
+# Unique identifier for lock names and counts.
+lock_name_prefix = 'lock'
+#lock_count = mycontext['threading_lock_count']
+
+# A list that contains all of the currently active threads. Note: There is no
+# way to actually tell if a thread has officially exited.  In theory there
+# could be actions from any of the threads that end up in this list. 
+# Additionally, we must initialize the list with a main thread.
+#active_threads_list = mycontext['threading_active_threads_list']
+
+# Dict of created locks, what thread holds them and a list of threads 
+# waiting to acquire the lock. The structure of the dict is of the form: 
+# { lockname : { 'held' : threadname, 'blocking' : [threads] } }
+#lock_info_dict = mycontext['threading_lock_info_dict']
+
+# List of all threads that are currently blocking. I realize this info can be 
+# inferred from the acquired_locks_dict but I find this more explicit.
+#blocked_threads_list = mycontext['threading_blocked_threads_list']
+
+
+
+
+### Internal Model helper function ###
+def assert_thread_ok(threadname):
+  return True  
+  """
+  <Purpose>
+    Simple function to check if a unique thread name actually exists and is not
+    currently blocking.
+
+  <Arguments>
+    threadname
+      The unique thread name in question.
+
+  <Exceptions>
+    InternalModelError
+      If the thread in question is found to not exist or is blocking this error
+      will be raised.
+
+  <Side Effects>
+    None.
+
+  <Returns>
+    None.
+  """
+  if threadname not in mycontext['threading_active_threads_list']:
+    raise InternalModelError("Thread: " + threadname + " referenced, " + 
+                             "does not exist!")
+
+  if threadname in mycontext['threading_blocked_threads_list']:
+    raise InternalModelError("Thread: " + threadname + " is currently " + 
+                             "blocked from running!")
+
+
+
+
+### Public API Calls are defined below ###
+def model_createthread(threadname, function):
+  """
+  <Purpose>
+    Creates a new thread of execution.
+
+  <Arguments>
+    function:
+      The function to invoke on entering the new thread.
+
+  <Exceptions>
+    RepyArgumentError is raised if the function is not callable.
+    ResourceExhaustedError is raised if there are no available events.
+
+  <Side Effects>
+    Launches a new thread.
+
+  <Resource Consumption>
+    Consumes an event.
+
+  <Returns>
+    None
+  """
+  log("###########################\n")
+  # Check to ensure thread is ok to run.
+  assert_thread_ok(threadname)
+
+  # Consult the oracle to see if we should let the function execute.
+  not_callable = RepyArgumentError("Provided function is not callable!")
+  value, error = oracle_getter("None", [not_callable])
+  if error != None:
+    raise error
+  
+  # Create a new thread name and add it to the active threads list.
+  unique_thread_name = thread_name_prefix + str(mycontext['threading_thread_count'][0])
+  mycontext['threading_thread_count'][0] += 1
+  mycontext['threading_active_threads_list'].append(unique_thread_name)
+
+  # Tattle an event to the resource manager.
+  tattle_add_item('events', unique_thread_name)
+
+  return unique_thread_name
+
+
+
+
+def model_getthreadname(threadname):
+  """
+  <Purpose>
+    Returns a string identifier for the currently executing thread.
+    This identifier is unique to this thread.  This is trivial in the model
+    since we must know a priori what thread this action is coming from.
+
+  <Arguments>
+    None.
+
+  <Exceptions>
+    None.
+
+  <Side Effects>
+    None.
+
+  <Returns>
+    A string identifier.
+  """
+  
+  # Check to ensure thread is ok to run.
+  assert_thread_ok(threadname)
+
+  return threadname
+
+
+
+
+def model_createlock(threadname):
+  """
+  <Purpose>
+    Returns a lock object to the user program. A lock object supports
+    two functions: acquire and release.
+
+  <Arguments>
+    None.
+
+  <Exceptions>
+    None.
+
+  <Side Effects>
+    None.
+
+  <Returns>
+    The lock object.
+  """
+
+  # Check to ensure thread is ok to run.
+  assert_thread_ok(threadname)
+
+  # Create new lock.
+  unique_lock_name = lock_name_prefix + str(mycontext['threading_lock_count'][0])
+  mycontext['threading_lock_count'][0] += 1
+
+  # Add a new entry in the lock info dict indicating that this lock exists.
+  mycontext['threading_lock_info_dict'][unique_lock_name] = {'held': None, 'blocking' : [] }
+
+  return unique_lock_name
+
+
+
+
+def model_lock_acquire(threadname, lockname, blocking):
+  """
+  <Purpose>
+    Acquires the lock.
+
+  <Arguments>
+    blocking:
+      If False, returns immediately instead of waiting to acquire the lock.
+
+  <Exceptions>
+    None.
+
+  <Side Effects>
+    If successful, locks the object which prevents other threads from 
+
+  <Returns>
+  True if the lock was acquired.
+  """
+
+  # Check to ensure thread is ok to run.
+  assert_thread_ok(threadname)
+
+  # Check to make sure the lock referenced was actually created.
+  if lockname not in mycontext['threading_lock_info_dict']:
+    raise InternalModelError("Lock " + lockname + " referenced, does " + 
+                             "not exist!")
+    
+  # Lock is not currently not held, grab it.
+  if mycontext['threading_lock_info_dict'][lockname]['held'] == None:
+    mycontext['threading_lock_info_dict'][lockname]['held'] = threadname
+    return True
+
+  # Lock is currently held and we are supposed to block, we should not return 
+  # anything at this point. TODO: Is None an acceptable return value? We need to
+  # somehow indicate that we have not returned yet. I think we could handle this
+  # in the wrapper that executes and observes a controllable trace.
+  elif blocking:
+    # The current thread is now blocking and is unable to perform any actions 
+    # until it has acquired the lock.
+    mycontext['threading_lock_info_dict'][lockname]['blocking'].append(threadname)
+    mycontext['threading_blocked_threads_list'].append(threadname)
+    return None
+
+  # Lock is currently held and we are not supposed to block.
+  else:
+    return False
+
+
+  
+
+def model_lock_release(threadname, lockname):
+  """
+  <Purpose>
+    Releases the lock.
+
+  <Arguments>
+    None
+
+  <Exceptions>
+    LockDoubleReleaseError if release is called on an unlocked lock.
+
+  <Side Effects>
+    Unlocks the object and puts any waiting threads back on the active 
+    threads list.
+
+  <Returns>
+    None
+  """
+
+  # Check to ensure thread is ok to run.
+  assert_thread_ok(threadname)
+
+  # Check to make sure the lock referenced was actually created.
+  if lockname not in mycontext['threading_lock_info_dict']:
+    raise InternalModelError("Lock " + lockname + " referenced, does " +
+                             "not exist!")
+    
+  # The lock is not currently held, so it must have already been released.
+  if mycontext['threading_lock_info_dict'][lockname]['held'] == None:
+    raise LockDoubleReleaseError("Releasing an un-locked lock!")
+
+  # Set the lock as not held.
+  mycontext['threading_lock_info_dict'][lockname]['held'] = None
+
+  # Copy all of the currently blocking threads back to active threads list.
+  mycontext['threading_active_threads_list'].extend(mycontext['threading_lock_info_dict'][lockname]['blocking'])
+
+  # Remove blocked threads from main block threads list.
+  for thread in mycontext['threading_lock_info_dict'][lockname]['blocking']:
+    mycontext['threading_blocked_threads_list'].remove(thread)
+  
+  # Clear out the blocking threads for this lock.
+  mycontext['threading_lock_info_dict'][lockname]['blocking'] = []
+

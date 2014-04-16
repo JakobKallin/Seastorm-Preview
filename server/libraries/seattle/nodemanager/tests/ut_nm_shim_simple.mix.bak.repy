@@ -1,0 +1,31 @@
+#pragma repy restrictions.test dylink.repy
+
+"""
+Author: Justin Cappos
+Description:
+This test verifies the GetVessels method does not generate an exception.
+
+"""
+
+dy_import_module_symbols("nmclient.repy")
+
+mycontext['UsingShims'] = True
+
+if callfunc == 'initialize':
+
+  # Obtain the node manager's ID. Usually, a client finds out about this through
+  # Seattle, but since this is a unit test, let us cheat a bit here. The node
+  # manager stores its ID in a file 'advertised_name', located in the same
+  # directory as the test files.
+  try:
+    fileobj = open('advertised_name')
+    (nodemanager_id, _) = fileobj.read().strip().split(':')
+    fileobj.close()
+  except Exception, e:
+    raise Exception("Unit test is unable to obtained the advertised ID of the node manager: " + str(e))
+
+  nmhandle = nmclient_createhandle(nodemanager_id, <nodemanager_port>)
+
+  nmclient_rawsay(nmhandle, "GetVessels")
+
+  nmclient_getvesseldict(nmhandle)

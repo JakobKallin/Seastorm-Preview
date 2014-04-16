@@ -1,0 +1,118 @@
+'''
+Created on Apr 12, 2011
+
+@author: jeffra45
+
+*** NOTE: The initial thread number is set to 2, since we are not using a user thread for verification. *** 
+'''
+# The main structure that stores actions as they are performed during execution.
+# <Key: action number, Value: action tuple>
+mycontext['trace_dict'] = {}
+
+mycontext['action_lock'] = createlock()
+mycontext['action_num'] = 0
+mycontext['verif-thread-enabled'] = True
+
+# A map from start action number to its corresponding finish action number.
+mycontext['start_finish_map'] = {}
+
+# List of actions that have not finished.
+mycontext['pending_actions'] = []
+
+# <Key: action_num, Value: set of finished action_nums>
+mycontext['condition_dict'] = {}
+
+# All the start action nums of finished actions.
+mycontext['finished_actions'] = []
+
+# A list of failure messages in case of a conformance failure.
+mycontext['failure_messages'] = []
+
+# Stores a return value and an error.
+mycontext['setter_getter_value'] = (None, None)
+
+
+TYPE="type"
+ARGS="args"
+RETURN="return"
+EXCP="exceptions"
+TARGET="target"
+FUNC="func"
+OBJC="objc"
+
+#### Initialize global model state ####
+mycontext['global_state_keys'] = ['fileio_file_state_dict','fileio_open_files_list','fileio_file_object_dict',
+                                  'fileio_closed_file_object_dict','fileio_file_object_count',
+                                  'threading_thread_count','threading_lock_count','threading_active_threads_list',
+                                  'threading_lock_info_dict','threading_blocked_threads_list',
+                                  'system_time','network_open_sockets_list','network_object_count_dict',
+                                  'network_socket_content_dict','network_tcpserver_content_dict',
+                                  'network_udpserver_content_dict','resource_restriction_table',
+                                  'resource_consumption_table','translate_ids']
+
+# Initial State for each part of the model.
+
+mycontext['fileio_file_state_dict'] = {}
+mycontext['fileio_open_files_list'] = []
+mycontext['fileio_file_object_dict'] = {}
+mycontext['fileio_closed_file_object_dict'] = {}
+mycontext['fileio_file_object_count'] = [1]
+
+mycontext['threading_thread_count'] = [1]
+mycontext['threading_lock_count'] = [0]
+mycontext['threading_active_threads_list'] = ['MainThread']
+mycontext['threading_lock_info_dict'] = {}
+mycontext['threading_blocked_threads_list'] = []
+
+mycontext['system_time'] = [0.0]
+
+mycontext['network_open_sockets_list'] = []
+mycontext['network_object_count_dict'] = {'socket': 0,'udpserver': 0,'tcpserver': 0}
+mycontext['network_socket_content_dict'] = {}
+mycontext['network_udpserver_content_dict'] = {}
+mycontext['network_tcpserver_content_dict'] = {}
+
+mycontext['resource_restriction_table'] = {}
+mycontext['resource_consumption_table'] = {}
+
+mycontext['translate_ids'] = {}
+
+
+
+def get_global_state_dict():
+  saved_dict = {}
+  for key in mycontext['global_state_keys']:
+    if isinstance(mycontext[key], list):
+      saved_dict[key] = list(mycontext[key])
+    elif isinstance(mycontext[key], dict):
+      saved_dict[key] = mycontext[key].copy()
+    else:
+      raise ParseError("Error parsing global state, should be list or dict only!")
+  return saved_dict
+
+"""
+CHILD_CONTEXT_DEF["get_global_state_dict"] = {TYPE:FUNC,
+                                              ARGS:None,
+                                              EXCP:Exception,
+                                              RETURN:"any",
+                                              TARGET:get_global_state_dict}
+"""
+
+
+
+def put_global_state_dict(new_global_state_dict):
+  for key in mycontext['global_state_keys']:
+    if isinstance(new_global_state_dict[key], list):
+      mycontext[key] = list(new_global_state_dict[key])
+    elif isinstance(new_global_state_dict[key], dict):
+      mycontext[key] = new_global_state_dict[key].copy()
+    else:
+      raise ParseError("Error parsing global state, should be list or dict only!")
+
+"""
+CHILD_CONTEXT_DEF["put_global_state_dict"] = {TYPE:FUNC,
+                                              ARGS:("any",),
+                                              EXCP:Exception,
+                                              RETURN:"any",
+                                              TARGET:put_global_state_dict}
+"""                                              

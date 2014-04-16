@@ -1,0 +1,67 @@
+/******************************
+* STYLE FOR ACCOUNT PAGES
+*******************************/
+
+table.login{
+    margin: 20px auto;
+    border-collapse: collapse;
+	border-spacing: 0;
+	width: 70%;
+	font-size: 14pt;
+}
+
+table.login tr td {
+    height: 50px;
+}
+
+table.login tr td.key {
+    text-align: right;
+    font-weight: bold;
+    width: 160px;
+}
+
+table.login tr td.value {
+    padding-left: 15px;
+}
+
+table.login tr td.value input[type="text"],
+table.login tr td.value input[type="password"] {
+    width: 180px;
+    border: 1px solid;
+    margin: 0px;
+}
+
+table.login tr td.value input {
+    padding: 1px;
+    font-size: 14pt;
+}
+
+table.login tr td.value select {
+    font-size: 10pt;
+}
+
+div.simpleloginoutter {
+    margin-top: 10px;
+    margin-left: 20px;
+    margin-bottom: 10px;
+    margin-right: 10px;
+    width: 21em;
+    padding: 0.5em 1em 0.5em 1em;
+    clear: right;
+    float: right;
+}
+
+div.simplelogininner {
+    margin: 0pt 0em 0pt 0.2em;
+    padding-left: 0;
+}
+
+#loading_indicator {
+    display : inline;
+    visibility : hidden;
+}
+
+#loading_indicator img {
+    width : 16px;
+    height : 16px;
+}

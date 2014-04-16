@@ -1,0 +1,5 @@
+dy_import_module_symbols('rhtestrecursion_2.repy')
+dy_import_module_symbols('rhtestrecursion_3.repy')
+
+def one():
+  print "hello from 1"

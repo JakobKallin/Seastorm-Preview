@@ -1,0 +1,205 @@
+
+/*********************************
+* STYLE FOR Seattle Clearinghouse
+*********************************/
+
+.bar {
+    width: 100%;
+    padding: 20px 0px;
+    font-size: 11pt;
+    color: #333;
+}
+
+.bar h3 {
+    margin-bottom: 10px;
+}
+
+.vesselstatus {
+	margin-top: 3px;
+	float: right;
+}
+
+table.credits {
+	border-spacing: 3px;
+	border: 2px solid #999;
+	width: 100%;
+	height: 80px;
+}
+
+table.usage {
+    border-spacing: 3px;
+	border: 2px solid #999;
+	width: 100%;
+	height: 80px;
+}
+
+table.credits tr td, table.usage tr td {
+	color: #666;
+	text-align: center;
+	vertical-align: middle;
+	padding: 8px;
+}
+
+table.credits tr td img, table.usage tr td img {
+    text-align: center;
+    vertical-align: middle;
+}
+
+table.credits tr td span, table.usage tr td span {
+    font-size: 14pt;
+    font-weight: bold;
+}
+
+table.usage tr td a {
+	float: right;
+	font-size: 12pt;
+	color: #888;
+	margin-left: 8px;
+}
+
+table.names {
+	border-spacing: 0px;
+	width: 100%;
+}
+
+table.names tr td {
+    padding: 3px;
+    text-align: center;
+}
+
+table.usage tr.theader {
+    height: 15px;
+    font-size: 10pt;
+    font-weight: normal;
+    text-align: right;
+    padding-right: 10px;
+}
+
+table.users {
+    display: none;
+    width: 100%;
+    margin: 20px auto;
+    border-spacing: 3px;
+    border: 2px solid #999;
+}
+
+table.users caption {
+    font-weight: bold;
+	padding: 20px auto 10px auto;
+}
+
+table.users tr td {
+    height: 25px;
+    text-align: center;
+}
+    
+table.users tr th {
+    font-weight: bold;
+    background-color: #FFCCFF;
+    color: #333;
+}
+
+#overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #ccc;
+    opacity: 0.3;
+    display: none;    
+    filter: alpha(opacity=30);
+}
+
+#dialogframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    display: none;
+}
+
+#dialogframe #getresourcesdialog,
+#dialogframe #shareresourcesdialog {
+    margin: 180px auto;
+    padding: 20px;
+    width: 300px;
+    background-color: #fff;
+    border: 1px solid #999;
+    text-align: center;
+    display: none;
+}
+
+#dialogframe #getresourcesdialog h3,
+#dialogframe #shareresourcesdialog h3,
+#dialogframe #changepercentdialog h3 {
+    margin: 5px auto;
+    font-size: 16pt;
+}
+
+#dialogframe #getresourcesdialog form,
+#dialogframe #shareresourcesdialog form {
+    margin-top: 15px;
+}
+
+#dialogframe #getresourcesdialog form select {
+    margin-top: 5px;
+}
+
+#dialogframe #getresourcesdialog input,
+#dialogframe #getresourcesdialog button,
+#dialogframe #shareresourcesdialog button,
+#dialogframe #changepercentdialog button {
+    margin-top: 20px;
+    font-size: 10pt;
+    padding: 1px;
+}
+
+#dialogframe #shareresourcesdialog span {
+    display: block;
+    width: 80px;
+    text-align: right;
+    float: left;
+    margin-top: 5px;
+}
+
+#dialogframe #shareresourcesdialog input,
+#dialogframe #changepercentdialog input {
+    font-size: 10pt;
+    margin-top: 5px;
+    padding: 1px;
+}
+
+
+#dialogframe #changepercentdialog {
+    margin: 180px auto;
+    padding: 20px;
+    width: 250px;
+    background-color: #fff;
+    border: 1px solid #999;
+    text-align: center;
+    display: none;
+}
+
+#dialogframe .warning {
+	color: red;
+	font-weight: bold;
+}
+
+#overcreditlimit {
+    background-color : #edd;
+    border : 1px solid #a00;
+    padding : 1em;
+    margin-top : 1em;
+    margin-bottom : 1em;
+}
+
+/* Paragraphs after another paragraph. */
+#overcreditlimit p+p { 
+    margin-top: 1.5em;
+}
+
+#vesselsused {
+  margin-right : 0.5em;
+}
+

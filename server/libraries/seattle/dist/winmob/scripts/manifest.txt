@@ -1,0 +1,27 @@
+This file describes the purpose and usage of each file in the current
+directory and summarizes the purpose of each subdirectory.
+
+=files=
+==manifest.txt=
+This file (see description at top).
+
+==sitecustomize.py==
+Included in the Windows Mobile installer, this file is copied to the
+directory on the phone where python is installed (specified in
+repy_constants.py) so that we can import seattle files. First, it
+is preprocessed, with all instances of %PROG_PATH% replaced by the
+actual path to the seattle directory.
+
+==start_seattle.py==
+Included in the Windows Mobile installer, this script will start
+the scripts which comprise seattle when run.
+
+==uncap.py==
+Included in the Windows Mobile installer, this script will change
+the names of each file in the directory from which it is run to all
+lowercase. Helpful on some phones because of copying case errors.
+
+==uninstall.py==
+Included in the Windows Mobile installer, this script will kill all
+running seattle processes and remove the seattle starter script from
+the startup folder when run.

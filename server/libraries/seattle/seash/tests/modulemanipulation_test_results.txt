@@ -1,0 +1,33 @@
+Enabled Modules:
+modules
+
+Installed Modules:
+clearinghouse - Install URL not available
+geoip - Install URL not available
+variables - Install URL not available
+modules - Install URL not available
+factoids - Install URL not available
+conflict - Install URL not available
+
+Enabled Modules:
+geoip, modules
+
+Installed Modules:
+clearinghouse - Install URL not available
+geoip - Install URL not available
+variables - Install URL not available
+modules - Install URL not available
+factoids - Install URL not available
+conflict - Install URL not available
+
+
+GeoIP Module
+
+This module includes commands that provide information regarding vessels'
+geographical locations.  To get started using this module, acquire several
+vessels through the Seattle Clearinghouse, use the 'browse' command, and then
+in any group, run either 'show location' or 'show coordinates'.
+
+Commands in this module:
+show location
+show coordinates

@@ -1,0 +1,8 @@
+message = None
+socket = listenformessage('127.0.0.1', 12346)
+while message is None:
+  try:
+    message = socket.getmessage()
+  except SocketWouldBlockError:
+    sleep(0.1)
+socket.close()

@@ -1,0 +1,94 @@
+"""
+<Program Name>
+  core_model_time.repy
+
+<Author>
+  Jeff Rasley
+  jeffra45@cs.washington.edu
+
+<Purpose> 
+  Model for time in the Core Model. Used to model the following API calls:
+    getruntime
+    sleep
+"""
+
+
+
+
+
+
+
+
+
+# 'global' used to keep track of system-wide running time.
+#system_time = mycontext['system_time']
+
+
+
+### Internal model helper function ###
+def _increment_time(seconds):
+  if seconds > 0.0:
+    # Increase time value by 'sec'.
+    mycontext['system_time'][0] += seconds
+
+
+
+
+### Public API Calls are defined below ###
+def model_getruntime(threadname):
+  """
+   <Purpose>
+      Gets the current runtime of the the given program.
+
+   <Arguments>
+      None.
+
+   <Exceptions>
+      None.
+
+   <Side Effects>
+      None.
+
+   <Returns>
+      A float the represents the current runtime of the program.
+  """
+
+  # Check to ensure thread is ok to run.
+  assert_thread_ok(threadname)
+
+  value, error = oracle_getter(None, [])
+  return value
+
+
+
+
+
+def model_sleep(threadname, seconds):
+  """
+   <Purpose>
+      Allow the current event to pause execution (similar to time.sleep()).
+      This function will not return early for any reason
+
+   <Arguments>
+      seconds:
+         The number of seconds to sleep. This can be a floating point value
+
+   <Exceptions>
+      RepyArgumentException if seconds is not an int/long/float.
+
+   <Side Effects>
+      None.
+
+   <Returns>
+      None.
+  """
+
+  # Check to ensure thread is ok to run.
+  assert_thread_ok(threadname)
+
+  if type(seconds) not in [long, float, int]:
+    raise RepyArgumentError("Invalid type " + str(type(seconds)))
+
+  # Not Implemented at the moment because of thread simultaneous sleep issue.
+  #if seconds > 0.0:
+  #  _increment_time(seconds)

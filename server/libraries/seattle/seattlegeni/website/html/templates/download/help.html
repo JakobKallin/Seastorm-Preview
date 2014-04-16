@@ -1,0 +1,97 @@
+{% extends "download/download_base.html" %}
+
+{% block title %}
+Help - Seattle Clearinghouse
+{% endblock title %}
+
+{% block style %}
+{{ block.super }}
+<link href="{{ MEDIA_URL }}css/help.css" rel="stylesheet" type="text/css" />
+{% endblock style %}	
+
+{% block nav_help %}
+<td class="active">Help</td>
+{% endblock nav_help %}
+
+{% block content %}
+<div id="main">
+  <div id="middle">
+    <div id="toc">
+      <h3>Table of Contents</h3>
+      <ul>
+	      <li><a href="#intro" title="Donation Introduction">Introduction to Seattle Donations</a></li>   
+	      <li><a href="#install" title="Installing Seattle">Installing Seattle</a></li>
+	      <li><a href="#pause" title="Pausing Seattle">Pausing Seattle</a></li> 
+        <li><a href="#uninstall" title="Uninstalling Seattle">Uninstalling Seattle</a></li>
+	      <li><a href="#contact">Who to contact for more help</a></li>
+      </ul>
+    </div>
+
+    <h2><a name="intro">Introduction to Seattle Donations</a></h2>
+
+    <p>By
+      running <a href="https://seattle.cs.washington.edu/">Seattle</a>
+      on your computer, you are contributing to a growing testbed of
+      hundreds of machines around the world. Your donation will make
+      available some resources on your computer for use by other
+      Seattle users. The Seattle project strives to provide a testbed
+      for more accurate network experimentation and to enable
+      researchers to test their hypotheses on an testbed of Internet
+      scale free of charge.</p>
+
+    <p><strong>Thank you for donating to the Seattle
+    testbed!</strong></p>
+
+    <p>On the download page, you may notice that it specifies that
+      this installation of Seattle will be crediting the donated
+      resources to Seattle user <strong>{{ username }}</strong>. By
+      downloading the installer from this page, you are donating
+      resources to this particular user.</p>
+
+    <p>The Seattle project provides a highly portable framework for
+      remote execution. Seattle is <strong>secure</strong> and provides
+      good <strong>performance-isolation</strong>.  Programs that run on the
+      donated resources are isolated so that a program cannot write or
+      read files it is not supposed to or perform other insecure
+      operations on your computer. The Seattle framework ensures fair
+      play for each donation by isolating the performance of all
+      program that run on the donated resources. Our promise to you is
+      to use no more than 10% of your computer's
+      resources. <strong>*</strong></p>
+
+    <h2><a name="install">Installing Seattle</a></h2> 
+    <p>Running Seattle on your machine is easy. Simply start the
+      install script (<code>install.bat</code>
+      or <code>install.sh</code>, depending on the type of your
+      system), and the application will do three things.  (1) start
+      the node manager program (2) start up the software updater, and
+      (3) register the node manager to start automatically on system
+      startup.</p>
+
+    <h2><a name="pause">Pausing Seattle</a></h2>
+    <p>To pause the execution of Seattle, run 
+    <code>stop_seattle</code>.  To unpause Seattle, run 
+    <code>start_seattle</code>.  During the paused period,
+    your computer's resources will not be consumed by student
+    programs.</p> 
+
+    <h2><a name="uninstall">Uninstalling Seattle</a></h2>
+    <p>If you decide to end your donation, Seattle can be uninstalled
+      simply by running the python script <code>seattleuninstaller.py</code>
+      (or the script <code>uninstall.sh</code>).  This process will
+      stop the node manager, and remove all traces of Seattle from
+      your system.</p>
+
+    {% include "common/help_contact.html" %}
+
+	<p class="footnote"><strong>*</strong> Computational resources
+ 	  include RAM, CPU time, network bandwidth, and hard drive
+ 	  space.  We're working on allowing users to specify a
+ 	  user-defined percentages or absolute values for each of
+ 	  these resources.</p>
+
+  </div>
+</div>
+
+
+{% endblock content %}

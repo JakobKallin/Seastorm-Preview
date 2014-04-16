@@ -1,0 +1,78 @@
+{% comment %}
+
+<p class="warning">NOTE : This template expects a username variable to exist in the current context</p>
+
+{% endcomment %}
+
+        
+			<table id="downloads">
+				<tr id="android">
+					<td><a href="market://details?id=com.seattletestbed&referrer=utm_source%3D{{domain}}{% url android_installer username %}%26utm_medium%3Ddownload%26utm_content%3D{{ username }}%26utm_campaign%3Dseattle"><img src="{{ MEDIA_URL }}images/android.png" alt="android" /></a></td>
+					<td>
+						<a href="market://details?id=com.seattletestbed&referrer=utm_source%3D{{domain}}{% url android_installer username %}%26utm_medium%3Ddownload%26utm_content%3D{{ username }}%26utm_campaign%3Dseattle">Download installer for Android</a>
+						<p>
+							<strong>Instructions:</strong>
+						</p>
+						<ol>
+							<li>On your Android device, tap the icon to the left to download Seattle Testbed via Google Play. (If that doesn't work, please try <a href="https://play.google.com/store/apps/details?id=com.seattletestbed&referrer=utm_source%3D{{domain}}{% url android_installer username %}%26utm_medium%3Ddownload%26utm_content%3D{{ username }}%26utm_campaign%3Dseattle">this alternative link</a>.)</li> 
+							<li>In the Google Play app, tap Install and review the requested permissions.</li> 
+							<li>Start the app and follow the on-screen instructions to complete the installation. Depending on the speed of your device, the process can take a few minutes to finish.</li> 
+						</ol>
+						<br/>
+						To check that Seattle is running, try running the Seattle On Android app!
+					</td>
+				</tr>
+				<tr id="mac">
+					<td><a href="{% url mac_installer username %}"><img src="{{ MEDIA_URL }}images/mac.png" alt="mac" /></a></td>
+					<td>
+						<a href="{% url mac_installer username %}">Download installer for Mac</a>
+						<p>
+							<strong>Instructions:</strong>
+							<br />(Note: You must have Python 2.5 installed)
+						</p>
+						<ol>
+							<li>Download the Seattle tarball to your computer</li>
+							<li>Extract the tarball to the directory in which you would like to install Seattle.</li>
+							<li>Navigate to that directory and run <code>./install.sh</code> (or python seattleinstaller.py).</li>
+						</ol>
+						<br/>
+						To check that Seattle is running, try running:
+						<br/>
+						<code> ps Aww | grep nmmain.py | grep -v grep</code>
+					</td>
+				</tr>
+				<tr id="win">
+					<td><a href="{% url win_installer username %}"><img src="{{ MEDIA_URL }}images/windows.png" alt="windows" /></a></td>
+					<td>
+						<a href="{% url win_installer username %}">Download installer for Windows</a>
+						<p><strong>Instructions:</strong></p>
+						<ol>
+						<li>Download the Seattle zip file to your computer</li>
+						<li>Extract the zip file to the directory in which you would like to install Seattle.</li>
+						<li>Double click (or run from the command line) install.bat.</li>
+						</ol>
+						<br/>
+						To check that Seattle is running, look in Task Manager for the process pythonw.exe.
+					</td>
+				</tr>
+				<tr id="linux">
+					<td><a href="{% url linux_installer username %}"><img src="{{ MEDIA_URL }}images/linux.png" alt="linux" /></a></td>
+					<td>
+						<a href="{% url linux_installer username %}">Download installer for Linux</a>
+						<p>
+							<strong>Instructions:</strong>
+							<br />(Note: You must have Python 2.5 installed)
+						</p>
+						<ol>
+							<li>Download the Seattle tarball to your computer</li>
+							<li>Extract the tarball to the directory in which you would like to install Seattle.</li>
+							<li>Navigate to that directory and run <code>./install.sh</code> (or python seattleinstaller.py).</li>
+						</ol>
+						<br/>
+						To check that Seattle is running, try running:
+						<br/>
+						<code> ps -ef | grep nmmain.py | grep -v grep</code>
+						
+					</td>
+				</tr>
+			</table>

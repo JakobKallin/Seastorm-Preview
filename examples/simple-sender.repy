@@ -1,0 +1,15 @@
+def send():
+  mycontext['messages_sent'] += 1
+  message = 'This is message number ' + str(mycontext['messages_sent'])
+  sendmessage(mycontext['other_ip'], mycontext['other_port'], message, getmyip(), mycontext['port'])
+  sleep(5)
+  send()
+
+if callfunc == "initialize":
+  mycontext['port'] = int(callargs[0])
+  mycontext['other_ip'] = callargs[1]
+  mycontext['other_port'] = int(callargs[2])
+  mycontext['messages_sent'] = 0
+  
+  log('Start send')
+  send()

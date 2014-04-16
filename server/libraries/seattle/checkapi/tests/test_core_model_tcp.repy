@@ -1,0 +1,37 @@
+dy_import_module_symbols("core_model_state.repy")
+dy_import_module_symbols("core_model_file_system.repy")
+dy_import_module_symbols("core_model_misc.repy")
+dy_import_module_symbols("core_model_networking.repy")
+dy_import_module_symbols("core_model_thread.repy")
+dy_import_module_symbols("core_model_mock.repy")
+
+def should_raise(error, fnc, *args):
+    try:
+        fnc(*args)
+    except error:
+        pass
+    else:
+        log("Should not have worked!\n")
+
+mainthread = "MainThread"
+localip = "127.0.0.1"
+localport = 12345
+destip = "127.0.0.1"
+destport = 12346
+
+socket1 = model_openconnection(mainthread, destip, destport, localip, localport, timeout=1)
+model_socket_close(mainthread, socket1)
+should_raise(SocketClosedLocal, model_socket_recv, mainthread, socket1, 10)
+should_raise(SocketClosedLocal, model_socket_send, mainthread, socket1, "msg")
+
+socket2 = model_openconnection(mainthread, destip, destport, localip, localport, timeout=1)
+model_socket_recv(mainthread, socket2, 10)
+model_socket_send(mainthread, socket2, "msg")
+
+tcpserver1 = model_listenforconnection(mainthread, localip, localport)
+model_tcpserver_close(mainthread, tcpserver1)
+should_raise(SocketClosedLocal, model_tcpserver_getconnection, mainthread, tcpserver1)
+
+tcpserver2 = model_listenforconnection(mainthread, localip, localport)
+_, _, socket3 = model_tcpserver_getconnection(mainthread, tcpserver2)
+model_tcpserver_close(mainthread, tcpserver2)

@@ -1,0 +1,20 @@
+server_socket = listenforconnection('127.0.0.1', 12346)
+socket = None
+
+while socket is None:
+  try:
+    (other_ip, other_port, socket) = server_socket.getconnection()
+    server_socket.close()
+  except SocketWouldBlockError:
+    sleep(0.1)
+
+sleep(1)
+
+try:
+  socket.recv(100)
+except SocketWouldBlockError:
+  pass
+
+sleep(2)
+socket.recv(100)
+socket.close()

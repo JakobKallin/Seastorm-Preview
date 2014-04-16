@@ -1,0 +1,27 @@
+"""
+Creates a new trace file, first ensures that the trace that exists is unique.
+"""
+def _write_out_action(action):
+    bytes, fd = mycontext['trace_output']
+    action_str = str(action) + '\n'
+    fd.writeat(action_str, bytes) 
+    bytes += len(action_str)
+    mycontext['trace_output'] = (bytes, fd)
+
+def _file_exists(filename):
+    try:
+        openfile(filename, False)
+        exists = True
+    except FileNotFoundError:
+        exists = False
+    return exists
+
+trace_file = OUTPUT_TRACE_FILE
+num = 1
+while _file_exists(trace_file):
+        trace_file = OUTPUT_TRACE_FILE
+        trace_file += str(num)
+        num += 1
+
+mycontext['trace_output'] = (0, openfile(trace_file, True))
+

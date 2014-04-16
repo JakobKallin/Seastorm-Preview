@@ -1,0 +1,37 @@
+This file describes the purpose and usage of all files in the current
+directory and summarizes the purpose of all subdirectories.
+
+=files=
+
+==LICENSE.txt==
+Includes legal information for Seattle.
+
+==install.bat==
+Included in the Windows installer, this will run the install script
+(seattleinstaller.py, located in trunk/dist) when called.
+
+==manifest.txt==
+This file (see description at top).
+
+==README==
+Includes an introduction to Seattle, installation and uninstall instructions,
+along with contact information.
+
+==start_seattle.bat==
+Included in the Windows installer, it starts the seattle programs which run in
+the background.
+
+==stop_seattle.bat==
+Included in the Windows installer, this runs stop_all_seattle_processes.py which
+kills all seattle processes.
+
+==uninstall.bat==
+Included in the Windows installer, this runs the uninstall script
+(seattleuninstaller.py), passing it the seattle startup path  when called.
+Note that this file is preprocessed at install time, with instances
+of %STARTER_FILE% replaced with the path to the seattle startup file.
+
+==seattleuninstaller.py==
+Included in the Windows installer, this kills seattle processes and
+removes seattle from the startup folder (specified in a command line
+argument) when run.

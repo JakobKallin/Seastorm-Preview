@@ -1,0 +1,10 @@
+*.sublime-workspace
+*.pyc
+jakobkallin.publickey
+jakobkallin.privatekey
+.svn
+server/tests/nodemanager/dylink_repy.py
+server/tests/nodemanager/*.old
+dylink_repy.py
+*.test.repy
+server/tests/*/seastorm.log

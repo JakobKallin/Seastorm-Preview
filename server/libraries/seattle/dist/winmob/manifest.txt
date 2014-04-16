@@ -1,0 +1,8 @@
+This file describes the purpose and usage of each file in the current
+directory and summarizes the purpose of each subdirectory.
+
+=subdirectories=
+==scripts==
+Contains scripts used in the Windows Mobile installer. All the files
+in this directory will be included in the Windows Mobile installer
+by the base installer builder.

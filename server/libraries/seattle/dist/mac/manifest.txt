@@ -1,0 +1,7 @@
+This file describes the purpose and usage of each file in the current
+directory and summarizes the purposes of each subdirectory.
+
+=subdirectories=
+==scripts==
+Contains scripts used in the mac installer. Every file in it will be
+included in the mac installer by the base installer builder.

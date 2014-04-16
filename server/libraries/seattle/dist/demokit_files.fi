@@ -1,0 +1,160 @@
+# Instructions for clean_folder.py to clean up the folder created by
+# build_demokit.py
+
+
+# Delete unnecessary files
+del *.pyc
+del *.mix
+del *.publickey
+del *.privatekey
+del foo.py
+del foowrite.py
+del generatekeys.py
+del newvessel.resources
+del softwareupdater.py
+del softwareupdater.logfile
+del key_daemon.repy
+del key_daemon_parser.repy
+del nmmain.py
+del nmconnectionmanager.py
+del nminit.py
+del nmrequest.py
+del nmadvertise.py
+del nmAPI.py
+del nmrequesthandler.py
+del nmresourcemath.py
+del nmstatusmonitor.py
+del nmthreadingerror.py
+del nmrestrictionsprocessor.py
+del nm_remote_api.py
+del rhizoma.py
+del AdvertiseObjects.repy
+del createnodekeys.py
+del daemon.py
+del runonce.py
+del safe_eval.repy
+del strace.py
+del priority_queue.repy
+del writemetainfo.py
+
+
+# Ensure inclusion of required files
+req domainnameinfo.repy
+req time_interface.repy
+req advertise.repy
+req centralizedadvertise.repy
+req checkpythonversion.py
+req dylink.repy
+req emulcomm.py
+req emulfile.py
+req emulmisc.py
+req emultimer.py
+req fakelinecache.py
+req httpretrieve.repy
+req httpserver.repy
+req idhelper.py
+req loggingrepy.py
+req loggingrepy_core.py
+req math.repy
+req misc.py
+req namespace.py
+req nanny.py
+req nonportable.py
+req openDHTadvertise.repy
+req persist.py
+req random.repy
+req repy.py
+req repy_constants.py
+req repyhelper.py
+req repyportability.py
+req repypp.py
+req restrictions.py
+req rsa.repy
+req safe.py
+req safe_check.py
+req seash.py
+req serialize.repy
+req servicelogger.py
+req servicelookup.repy
+req session.repy
+req sha.repy
+req signeddata.repy
+req sockettimeout.repy
+req statusstorage.py
+req time.repy
+req tracebackrepy.py
+req parallelize.repy
+req windows_api.py
+req win_cpu_nanny.py
+req uniqueid.repy
+req timeout_xmlrpclib.py
+req listops.repy
+req xmlrpc_server.repy
+req darwin_api.py
+req urllib.repy
+req linux_api.py
+req freebsd_api.py
+req base64.repy
+req xmlrpc_common.repy
+req pycryptorsa.repy
+req getvesselresources.repy
+req semaphore.repy
+req xmlparse.repy
+req argparse.repy
+req urlparse.repy
+req repyunit.repy
+req tcp_time.repy
+req ntp_time.repy
+req xmlrpc_client.repy
+req nix_common_api.py
+req cv.repy
+req freebsd_kinfo.py
+req md5py.repy
+req binascii.repy
+req sshkey_paramiko.repy
+req pyDes.repy
+req sshkey.repy
+req NAT_advertisement.repy
+req DORadvertise.repy
+req textops.py
+req NATLayer_rpc.repy
+req deserialize.repy
+req Multiplexer.repy
+req safety_exceptions.py
+req harshexit.py
+req portable_popen.py
+req nanny_resource_limits.py
+req geoip_client.repy
+req nmclient.repy
+req nmstatusinterface.py
+req virtual_namespace.py
+req experimentlib.py
+req seattleclearinghouse_xmlrpc.py
+req repyimporter.py
+req LICENSE.txt, LICENSE.TXT
+req readline_windows.py
+req pyreadline
+
+
+# Demo-specific files
+
+# All-pairs ping map application
+req appmap.py
+req pingneighbors.py
+req style.css
+req jquerygmaps.js
+req map_marker_icon.png
+req map_marker_sel_icon.png
+
+# All-pairs ping demo
+req allpairsping.repy
+
+# UDP ping demos
+req udpping.repy
+req udppingserver.repy
+req udpforward.repy
+req restrictions.allowallports
+
+# Programs for Take Home Assignment
+req infloop.repy
+req helloworld.repy

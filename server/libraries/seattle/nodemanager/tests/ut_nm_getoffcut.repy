@@ -1,0 +1,16 @@
+#pragma repy restrictions.test dylink.repy
+
+"""
+Author: Justin Cappos
+Description:
+This test calls GetOffcutResources to verify no exceptions are thrown
+"""
+
+dy_import_module_symbols("nmclient.repy")
+
+if callfunc == 'initialize':
+  nmhandle = nmclient_createhandle(getmyip(), <nodemanager_port>)
+
+  # what do I do to check?
+  nmclient_rawsay(nmhandle, "GetOffcutResources")
+

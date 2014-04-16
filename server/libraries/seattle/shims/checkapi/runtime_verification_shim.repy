@@ -1,0 +1,179 @@
+'''
+Created on Apr 18, 2011
+
+@author: jeffra45
+'''
+
+
+mycontext['obj_id_lock'] = createlock()
+mycontext['obj_id_count'] = 0
+
+mycontext['closed_ids'] = []
+
+# API calls that return an object, this is used to match the API call with its
+# corresponding model wrapper object.
+OBJ_CREATE_CALLS_DICT = {'listenforconnection':ShimTCPServerSocket,
+                         "openconnection":ShimSocket,
+                         "listenformessage":ShimUDPServerSocket,
+                         "tcpserver_getconnection":ShimSocket}
+
+
+def _generate_new_obj_id():
+  #while not mycontext['obj_id_lock'].acquire(False):
+  #  log('o')
+  #  sleep(.1)
+  mycontext['obj_id_count'] += 1
+  new_id = "obj" + str(mycontext['obj_id_count'])
+  #mycontext['obj_id_lock'].release()
+  return new_id
+
+
+
+def wrap_tag_shim_object(fnc_name, impl_obj, shim):
+  # Generate new object id.
+  shim_obj_id = _generate_new_obj_id()
+  mycontext['translate_ids'][shim_obj_id] = None
+
+  if fnc_name == "tcpserver_getconnection":
+    ip, port, socket_obj = impl_obj
+    wrapped_socket = OBJ_CREATE_CALLS_DICT[fnc_name](socket_obj, shim)
+    wrapped_socket._socket.implid = shim_obj_id
+    return (ip, port, wrapped_socket)
+  else:
+    # Create new wrapper object.
+    shim_obj = OBJ_CREATE_CALLS_DICT[fnc_name](impl_obj, shim)
+    shim_obj._socket.implid = shim_obj_id
+    return shim_obj
+
+
+
+def _wrap_and_store_object(fnc_name, impl_obj):
+  # Generate new object id.
+  impl_obj_id = _generate_new_obj_id()
+  mycontext['translate_ids'][impl_obj_id] = None
+    
+  if fnc_name == "tcpserver_getconnection":
+    ip, port, socket_obj = impl_obj
+    wrapped_socket = OBJ_CREATE_CALLS_DICT[fnc_name](socket_obj, impl_obj_id)
+    return (ip, port, wrapped_socket)
+  else:
+    # Create new wrapper object.
+    return OBJ_CREATE_CALLS_DICT[fnc_name](impl_obj, impl_obj_id)
+
+
+def log_start(start_tuple):
+  mycontext['action_lock'].acquire(True)
+  mycontext['action_num'] += 1
+  start_action_number = mycontext['action_num']
+  start_tuple = tuple([start_action_number]) + start_tuple
+  mycontext['trace_dict'][start_action_number] = start_tuple
+  mycontext['pending_actions'].append(start_action_number)
+  
+  # Generate condition dictionary for later disambiguation.
+  #mycontext['condition_dict'][start_action_number] = set(mycontext['start_finish_map'].keys())
+  mycontext['condition_dict'][start_action_number] = set(mycontext['finished_actions'])
+  if WRITE_OUT_TRACE:
+    _write_out_action(start_tuple)
+  mycontext['action_lock'].release()
+  # Start action done.
+
+  return start_action_number
+  
+
+def log_finish(start_action_number, finish_tuple):
+  mycontext['action_lock'].acquire(True)
+  mycontext['action_num'] += 1
+  finish_action_number = mycontext['action_num'] 
+  finish_tuple = tuple([finish_action_number]) + finish_tuple
+  mycontext['trace_dict'][finish_action_number] = finish_tuple
+  mycontext['start_finish_map'][start_action_number] = finish_action_number
+  # Pending actions remove is O(len(pending_actions)), where pending actions will never be
+  # more than the number of current threads.
+  mycontext['pending_actions'].remove(start_action_number)
+  mycontext['finished_actions'].append(start_action_number)
+  if WRITE_OUT_TRACE:
+    _write_out_action(finish_tuple)
+  mycontext['action_lock'].release()
+  # Finish action done
+
+
+
+def exec_model_impl(fnc_name, threadname, model_func, impl_func, args_list, shim, obj_id=None, impl_obj=None):
+  """
+  <Purpose>
+    This is the heart of the runtime verification portion of CheckAPI. All interposed
+    API calls get executed and verified via this function.
+    
+  <Arguments>
+    fnc_name
+      String representation of the API function in question
+    threadname
+      Thread id based on getthreadname()
+    model_func
+      Function pointer to the API function in the model 
+    impl_func
+      Function pointer to the API function in the implementation
+    args_list
+      List of all arguments needed to execute the action in the implementation
+    obj_id (optional)
+      Unique string representation of an object.
+    impl_obj (optional)
+      The actual object that a given method may be calling from
+      
+  <Exceptions>
+    Raises a ModelConformanceFailure or whatever impl_func raises.
+    
+  <Returns>
+    Returns whatever impl_func returns.
+  """
+
+  # Log start action.
+  start_tuple = (fnc_name, 'start', threadname, obj_id, tuple(args_list), model_func)
+  start_action_number = log_start(start_tuple)
+
+  if DEBUG:
+    log(start_tuple, '\n')
+
+  # In the case where we are calling instance methods, we must pass the function
+  # the original socket instance. This is only used to comply with shim function
+  # semantics. 'impl_ojb' must be the original shim object, not the model object.
+  if fnc_name in OBJ_METHOD_CALLS_SET:
+    args_list.insert(0, impl_obj)
+
+  # Execute in the implementation.
+  impl_ret = impl_error = None
+  try:
+    impl_ret = impl_func(*args_list)
+  except RepyException, impl_error:
+    pass
+
+  if fnc_name in OBJ_CREATE_CALLS_DICT and impl_error is None:
+    impl_ret = wrap_tag_shim_object(fnc_name, impl_ret, shim)
+
+  # Log finish action.
+  finish_tuple = (fnc_name, 'finish', threadname, obj_id, tuple([impl_ret, impl_error]), None)
+  log_finish(start_action_number, finish_tuple)
+  
+  if DEBUG:
+    log(finish_tuple, '\n')
+
+  # We must tag the shim object with an obj id, this can only be done in the shim itself.
+  # This requires that we pass back the impl object and our unique id.
+  #if fnc_name in OBJ_CREATE_CALLS_DICT:
+  #  impl_ret = (impl_ret, sh
+
+  if len(mycontext['trace_dict']) > SYSTOLIC_LEVELS:
+    if mycontext['action_lock'].acquire(False):
+      try:     
+        status_okay = disambiguate_and_verify()
+        if not status_okay:
+          for fail in mycontext['failure_messages']: log(fail,'\n')
+          raise ModelConformanceFailure("Could not find a valid serialization!")
+      finally:
+        mycontext['action_lock'].release()
+
+  # We are done, return or raise to caller!
+  if impl_error != None:
+    raise impl_error
+  else:
+    return impl_ret

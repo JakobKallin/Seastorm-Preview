@@ -1,0 +1,6 @@
+repy_socket = repy_openconnection('127.0.0.1', 12346, '127.0.0.1', 12345, 10)
+repy_socket.send('1234')
+sleep(2)
+repy_socket.send('hello')
+sleep(2)
+repy_socket.close()

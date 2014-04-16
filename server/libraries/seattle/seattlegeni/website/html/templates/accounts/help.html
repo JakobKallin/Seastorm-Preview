@@ -1,0 +1,138 @@
+{% extends "accounts/accounts_base.html" %}
+
+{% comment %}
+<Program>
+  accounts/help.html
+
+<Author>
+  Originally by?:
+  Justin Samuel 2009
+
+  Modified:
+  Gaetano Pressimone 2012
+  
+<Purpose>
+  Django template file for Seattle Clearinghouse's 'help' page.  This help page
+  is for non-logged in users only.
+
+<Extends>
+  accounts/accounts_base.html
+
+<Stylesheet>
+  common.css
+  account.css
+  help.css
+
+<Scripts>
+  jquery.js
+
+<Template Variables>
+  None
+
+{% endcomment %}
+
+{% block style %}
+{{ block.super }}
+<link href="{{ MEDIA_URL }}css/help.css" rel="stylesheet" type="text/css" />
+{% endblock style %}
+
+{% block title %}
+Help - Clearinghouse
+{% endblock title %}
+
+{% block nav_help %}
+<td class="active"><a href="{% url accounts_help %}">Help</a></td>
+{% endblock nav_help %}
+
+{% block content %}
+	<div id="main">
+		<div id="middle">
+			<div id="toc">
+				<h3>Table of Contents</h3>
+				<ul>
+					<li><a href="#introduction" title="What is Clearinghouse">What is Clearinghouse</a></li>
+					<li><a href="#register" title="How to Register">How to Register</a></li>
+					<li><a href="#login" title="How to Login">How to Login</a></li>
+					<li><a href="#passwords" title="Lost passwords">Lost passwords</a></li>		
+					<li><a href="#contact" title="Who to contact">Who to contact for more help</a></li>
+				</ul>
+			</div>
+			<h2><a name="introduction">What is Clearinghouse</a></h2>
+
+			<p>
+			  Clearinghouse is a web-based portal for
+			  managing <a href="https://seattle.cs.washington.edu/">Seattle</a>
+			  resources. These resources are donated by
+			  users who have installed Seattle on their
+			  machines. In return these users are allowed
+			  to use resources donated by others. Clearinghouse
+			  enables users of donated resources to
+			  acquire nodes around the world on which they
+			  can then execute programs written
+			  in <a href="https://seattle.cs.washington.edu/wiki/RepyTutorial">Repy</a>,
+			  the Seattle platform programming
+			  language. Clearinghouse also lets users to share
+			  their resources with other users, and
+			  perform a variety of other tasks. For more
+			  information about about how Clearinghouse fits with
+			  the rest of the Seattle platform,
+			  see <a href="https://seattle.cs.washington.edu/wiki/SeattleComponents">this
+			    page</a>.
+			</p>
+			
+			<h2><a name="register">How to Register</a></h2>
+
+			<p>You are required to fill out five fields as
+			  part of the registration process.</p>
+								 
+			<ul>
+
+			  <li><strong>Username.</strong> The login name
+			  you want to use in the Clearinghouse portal. You will
+			  need your username as well as your password
+			  to login to the portal. </li>
+
+			  <li><strong>Password.</strong> You should
+			    choose a password that is at least 6
+			    characters in length. Please secure your
+			    password by making it obscure enough to
+			    evade possible dictionary attacks.</li>
+			  
+			<li><strong>Password Confirmation.</strong>
+			  Confirm your password.</li>
+				
+			  <li><strong>Affiliation.</strong> Choose a
+			    company name or an institution that you
+			    associate with. </li>
+			  
+			<li><strong>My Public Key.</strong> If you
+			  have a personal public/private key pair that
+			  you would like to use to access Seattle
+			  nodes, please select "Let me upload my
+			  public key" and select to upload
+			  your <strong>public key</strong> by clicking
+			  "Browse.." in the field
+			  below. Alternatively, you can have Clearinghouse
+			  generate the public/private key pair for
+			  you.</li>
+			</ul>
+			
+			<h2><a name="login">How to Login</a></h2>
+			
+			<p>Enter your username and password to log
+			  into the portal.</p>
+			
+			<h2><a name="passwords">Lost passwords</a></h2>
+			
+			<p>If you forget your password or your username,
+			  please email <a href="mailto:seattle-devel@cs.washington.edu">seattle-devel@cs.washington.edu</a>.   For password reset requests,
+			  we validate that you are able to receive mail from 
+			  the email address listed under the account.
+			  </p>
+			
+			{% include "common/help_contact.html" %}
+		</div>
+	</div>
+
+
+{% endblock content %}

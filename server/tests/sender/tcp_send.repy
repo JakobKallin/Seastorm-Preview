@@ -1,0 +1,4 @@
+try:
+  openconnection('127.0.0.1', 12346, '127.0.0.1', 12345, 2)
+except:
+  pass

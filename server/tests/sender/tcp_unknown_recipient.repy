@@ -1,0 +1,4 @@
+socket = openconnection('127.0.0.1', 20000, '127.0.0.1', 12345, 2)
+socket.send('hello')
+sleep(2)
+socket.close()

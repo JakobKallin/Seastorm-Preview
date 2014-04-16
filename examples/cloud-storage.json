@@ -1,0 +1,24 @@
+{
+	"processes": {"1.1.1.1": "Client", "2.2.2.2": "Server A", "3.3.3.3": "Server B", "4.4.4.4": "Server C"},
+	"events": [
+		{ "time": 0, "type": "send", "process": "1.1.1.1", "recipient": "4.4.4.4", "data": "Session request to C" },
+		{ "time": 1, "type": "send", "process": "1.1.1.1", "recipient": "3.3.3.3", "data": "Session request to B" },
+		{ "time": 2, "type": "send", "process": "1.1.1.1", "recipient": "2.2.2.2", "data": "Session request to A" },
+		{ "time": 3, "type": "log", "process": "1.1.1.1", "data": "Waiting for response" },
+		{ "time": 3, "type": "receive", "process": "2.2.2.2", "sender": "1.1.1.1", "departure": 2, "data": "Session request to A" },
+		{ "time": 2, "type": "receive", "process": "3.3.3.3", "sender": "1.1.1.1", "departure": 1, "data": "Session request to B" },
+		{ "time": 1, "type": "receive", "process": "4.4.4.4", "sender": "1.1.1.1", "departure": 0, "data": "Session request to C" },
+		{ "time": 4, "type": "send", "process": "2.2.2.2", "recipient": "1.1.1.1", "data": "Session granted by A" },
+		{ "time": 3, "type": "send", "process": "3.3.3.3", "recipient": "1.1.1.1", "data": "Session granted by B" },
+		{ "time": 2, "type": "send", "process": "4.4.4.4", "recipient": "1.1.1.1", "data": "Session granted by C" },
+		{ "time": 4, "type": "receive", "process": "1.1.1.1", "sender": "3.3.3.3", "departure": 3, "data": "Session granted by B" },
+		{ "time": 5, "type": "send", "process": "1.1.1.1", "recipient": "3.3.3.3", "data": "File request 1" },
+		{ "time": 6, "type": "send", "process": "1.1.1.1", "recipient": "3.3.3.3", "data": "File request 2" },
+		{ "time": 6, "type": "receive", "process": "3.3.3.3", "sender": "1.1.1.1", "departure": 5, "data": "File request 1" },
+		{ "time": 8, "type": "receive", "process": "3.3.3.3", "sender": "1.1.1.1", "departure": 6, "data": "File request 2" },
+		{ "time": 7, "type": "send", "process": "3.3.3.3", "recipient": "1.1.1.1", "data": "File response 1" },
+		{ "time": 9, "type": "send", "process": "3.3.3.3", "recipient": "1.1.1.1", "data": "File response 2" },
+		{ "time": 11, "type": "receive", "process": "1.1.1.1", "sender": "3.3.3.3", "departure": 7, "data": "File response 1" },
+		{ "time": 10, "type": "receive", "process": "1.1.1.1", "sender": "3.3.3.3", "departure": 9, "data": "File response 2" }
+	]
+}

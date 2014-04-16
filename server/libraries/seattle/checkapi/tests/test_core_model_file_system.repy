@@ -1,0 +1,29 @@
+dy_import_module_symbols("core_model_state.repy")
+dy_import_module_symbols("core_model_file_system.repy")
+dy_import_module_symbols("core_model_misc.repy")
+dy_import_module_symbols("core_model_networking.repy")
+dy_import_module_symbols("core_model_thread.repy")
+dy_import_module_symbols("core_model_mock.repy")
+
+def should_raise(error, fnc, *args):
+    try:
+        fnc(*args)
+    except error:
+        pass
+    else:
+        log("Should not have worked!\n")
+
+mainthread = "MainThread"
+
+# Openfile
+should_raise(FileNotFoundError, model_openfile, mainthread, "nonfile", False)
+should_raise(RepyArgumentError, model_openfile, mainthread, "nonfile", "string")
+should_raise(RepyArgumentError, model_openfile, mainthread, ".badfile", "string")
+fdid = model_openfile(mainthread, "newfile", True)
+should_raise(FileInUseError, model_openfile, mainthread, "newfile", True)
+
+# Removefile
+should_raise(FileInUseError, model_removefile, mainthread, "newfile")
+should_raise(FileNotFoundError, model_removefile, mainthread, "badfile")
+model_file_close(mainthread, fdid)
+model_removefile(mainthread, "newfile")

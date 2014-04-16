@@ -1,0 +1,35 @@
+/******************************
+* STYLE FOR CHANGE_KEY PAGE
+*******************************/
+
+h3 {
+    margin-top : 1em;
+}
+
+/* Paragraphs after another paragraph. */
+p+p { 
+    margin-top: 1.5em;
+}
+
+#apikey {
+    background-color : #eef;
+    border : 1px solid #33b;
+    padding : 0.5em;
+    margin-top : 0.5em;
+    margin-bottom : 0.5em;
+    text-align : center;
+    font-family : courier;
+    font-weight : bold;
+}
+
+#apikeygenform {
+    margin : 1em 1em 1em 1em;
+}
+
+#message {
+    background-color : #ded;
+    border : 1px solid #0a0;
+    padding : 1em;
+    margin-top : 1em;
+    margin-bottom : 1em;
+}

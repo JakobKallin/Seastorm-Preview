@@ -1,0 +1,5 @@
+def three():
+  print "greetings from three"
+
+dy_import_module_symbols('rhtestrecursion_1.repy')
+

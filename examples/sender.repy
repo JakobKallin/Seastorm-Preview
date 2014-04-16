@@ -1,0 +1,4896 @@
+#begin include time.repy
+"""
+<Program Name>
+  time.repy
+
+<Author>
+  Eric Kimbrel
+
+<Started>
+  Jul 2, 2009
+
+<Purpose>
+ replaces the previous time.repy by use of the active interface 
+ time_interface.repy and the implementors ntp_time.repy and tcp_time.repy
+
+ see time_interface.repy for details
+
+"""
+
+
+#begin include ntp_time.repy
+"""
+   Author: Justin Cappos
+     Edited by Eric Kimbrel, this was originally time.repy 
+
+   Start Date: 8 August 2008
+
+   Description:
+
+   This is an implementation of time_interface.repy
+
+   This module handles getting the time from an external source, via UDP.
+   It gets the remote time once and then uses the offset from the local 
+   clock from then on
+   to return the current time.
+
+   To use this module, first make a call to time_updatetime(localport) with a
+   local UDP port that you have permission to send/recv on. This will
+   contact some random subset of NTP servers to get and store the local time.
+
+   Then, to get the actual time, call time_gettime() which will return
+   the current time (in seconds). time_gettime() can be called at any point
+   after having called time_updatetime(localport) since time_gettime() simply
+   calculates how much time has elapsed since the local time was originally 
+   acquired from one of the NTP servers.
+
+   Note that time_gettime() will raise TimeError if no NTP server responded or
+   if time_updatetime(localport) was never previously called.  If time_gettime()
+   fails, then time_updatetime(localport) can be called again to sample time
+   from another random set of NTP servers.
+"""
+
+
+#begin include time_interface.repy
+"""
+<Program Name>
+  time_interface.repy
+
+<Author>
+  Eric Kimbrel
+
+<Started>
+  Jul 2, 2009
+
+<Purpose>
+  Provide a framework to run any implementation of a ntp time service that
+  follows the interface provided here.
+
+  Any implementation must provide update method that takes a localport 
+  as an argument.
+
+  Implementers will set a mapping to their functions by calling 
+  time_register_method
+
+  USE:
+  
+  To use this module, first make a call to time_updatetime(localport),where
+  localport is a valid UDP port that you can send and receive on (note that
+  this port may not be used depending on the implementation.)
+
+  Then, to get the actual time, call time_gettime() which will return
+  the current time (in seconds).
+
+  time.repy will attempt to use the update method of any impelemntor included.
+  If none are included or if they all fail an exception is thrown
+
+"""
+
+
+# dictionary for time implementers to store their information
+# the settime method is passed in for use by implementers
+TIME_IMP_DICT = {}
+
+time_query_times = []
+
+class TimeError(Exception):
+  pass
+
+
+def time_register_method(imp_name,update_method):
+  """
+  <Purpose>
+  Allow an implementation to register its update method with time.repy
+
+  <Arguments>
+  imp_name, the name or unique abbreviation of the implementation
+  update_method, a time update_method
+  
+  <Exceptions>
+  None
+
+   <Returns>
+   None
+  """
+  TIME_IMP_DICT[imp_name] = update_method
+
+
+
+
+def time_updatetime(localport):
+  """
+   <Purpose>
+    Obtains and stores the local time from a subset of NTP servers.
+    Attempts to update the time with each implementation provided
+    until one succeeds or they all fail
+
+   <Arguments>
+    localport:
+             The local port that MAY be used when contacting the NTP server(s).
+             Consider this port a hint and not a rule.
+   
+   <Exceptions>
+    Exception occurs when all methods fail to updatetime, or no such methods 
+    are provided (no mehtods have registered)
+
+   <Side Effects>
+    time_settime(currenttime) is called as the sub process of a sub process,
+    which adjusts the current time.
+
+   <Returns>
+    None.
+  """
+  exception_list = []
+  # try the 'update' function for each implementation, storing exceptions in
+  # case of total failure, and exiting the function when any of the 'update'
+  # functions succeed.
+  for update in TIME_IMP_DICT:
+    try:
+      TIME_IMP_DICT[update](localport)
+    except Exception, e:
+      exception_list.append(e)
+    else:
+      return  # exit when we succeed
+
+  # we failed
+  ex_str =''
+  for ex in exception_list:
+    ex_str+=str(ex)
+  ex_str = 'ERROR: failed to update ntp time, '+ex_str
+  raise Exception(ex_str)
+
+
+
+
+
+def time_settime(currenttime):
+  """
+   <Purpose>
+    Sets a remote time as the current time.
+
+   <Arguments>
+    currenttime:
+               The remote time to be set as the current time.
+
+   <Exceptions>
+    None.
+
+   <Side Effects>
+    Adjusts the current time.
+
+   <Returns>
+    None.
+  """
+
+  time_query_times.append((getruntime(), currenttime))
+
+
+
+
+
+
+def time_gettime():
+  """
+   <Purpose>
+    Gives the current time in seconds by calculating how much time has elapsed
+    since the local time was obtained from an NTP server via the
+    time_updatetime(localport) function.
+
+   <Arguments>
+    None.
+
+   <Exceptions>
+    TimeError when time_updatetime(localport)has not previously been called or 
+    when time_updatetime(localport) has any unresolved TimeError exceptions.
+
+   <Side Effects>
+    None.
+
+   <Returns>
+    Current time in seconds.
+  """
+
+  if time_query_times == []:
+    raise TimeError, "TimeError: time_query_times is an empty list because it has not been set."
+
+  # otherwise use the most recent data...
+  latest_update = time_query_times[-1]
+
+  # first item is the getruntime(), second is NTP time...
+  elapsedtimesinceupdate = getruntime() - latest_update[0]
+
+  return latest_update[1] + elapsedtimesinceupdate
+
+
+
+# in case you want to change to time since the 1970 (as is common)
+time_seconds_from_1900_to_1970 = 2208988800
+
+
+
+
+#end include time_interface.repy
+
+# Use for random sampling...
+#begin include random.repy
+""" 
+<Program Name>
+  random.repy
+
+<Author>
+  Justin Cappos: random_sample
+
+  Modified by Anthony Honstain
+    random_nbit_int and random_long_to_bytes is modified from 
+    Python Cryptography Toolkit and was part of pycrypto which 
+    is maintained by Dwayne C. Litzenberger
+    
+    random_range, random_randint, and random_int_below are modified 
+    from the Python 2.6.1 random.py module. Which was:
+    Translated by Guido van Rossum from C source provided by
+    Adrian Baddeley.  Adapted by Raymond Hettinger for use with
+    the Mersenne Twister  and os.urandom() core generators.  
+
+<Purpose>
+  Random routines (similar to random module in Python)
+  
+  
+<Updates needed when emulmisc.py adds randombytes function>
+  TODO-
+    random_nbit_int currently uses random_randombytes as a source 
+    of random bytes, this is not a permanent fix (the extraction 
+    of random bytes from the float is not portable). The change will
+    likely be made to random_randombytes (since calls os.urandom will
+    likely be restricted to a limited number of bytes).  
+  TODO - 
+    random_randombytes will remained but serve as a helper function
+    to collect the required number of bytes. Calls to randombytes
+    will be restricted to a set number of bytes at a time, since
+    allowing an arbitrary request to os.urandom would circumvent 
+    performance restrictions. 
+  TODO - 
+    _random_long_to_bytes will no longer be needed.  
+      
+"""
+
+#begin include math.repy
+""" Justin Cappos -- substitute for a few python math routines"""
+
+def math_ceil(x):
+  xint = int(x)
+  
+  # if x is positive and not equal to itself truncated then we should add 1
+  if x > 0 and x != xint:
+    xint = xint + 1
+
+  # I return a float because math.ceil does
+  return float(xint)
+
+
+
+def math_floor(x):
+  xint = int(x)
+  
+  # if x is negative and not equal to itself truncated then we should subtract 1
+  if x < 0 and x != xint:
+    xint = xint - 1
+
+  # I return a float because math.ceil does
+  return float(xint)
+
+
+
+math_e = 2.7182818284590451
+math_pi = 3.1415926535897931
+
+# Algorithm from logN.py on
+# http://en.literateprograms.org/Logarithm_Function_(Python)#chunk
+# MIT license
+#
+# hmm, math_log(4.5,4)      == 1.0849625007211561
+# Python's math.log(4.5,4)  == 1.0849625007211563
+# I'll assume this is okay.
+def math_log(X, base=math_e, epsilon=1e-16):
+  # JMC: The domain of the log function is {n | n > 0)
+  if X <= 0:
+    raise ValueError, "log function domain error"
+
+  # log is logarithm function with the default base of e
+  integer = 0
+  if X < 1 and base < 1:
+    # BUG: the cmath implementation can handle smaller numbers...
+    raise ValueError, "math domain error"
+  while X < 1:
+    integer -= 1
+    X *= base
+  while X >= base:
+    integer += 1
+    X /= base
+  partial = 0.5               # partial = 1/2 
+  X *= X                      # We perform a squaring
+  decimal = 0.0
+  while partial > epsilon:
+    if X >= base:             # If X >= base then a_k is 1 
+      decimal += partial      # Insert partial to the front of the list
+      X = X / base            # Since a_k is 1, we divide the number by the base
+    partial *= 0.5            # partial = partial / 2
+    X *= X                    # We perform the squaring again
+  return (integer + decimal)
+
+
+#end include math.repy
+
+def random_randombytes(num_bytes, random_float=None):
+  """
+   <Purpose>
+     Return a string of length num_bytes, made of random bytes 
+     suitable for cryptographic use (because randomfloat draws
+     from a os provided random source).
+      
+     *WARNING* If python implements float as a C single precision
+     floating point number instead of a double precision then
+     there will not be 53 bits of data in the coefficient.
+
+   <Arguments>
+     num_bytes:
+               The number of bytes to request from os.urandom. 
+               Must be a positive integer value.
+     random_float:
+                  Should not be used, available only for testing
+                  so that predetermined floats can be provided.
+    
+   <Exceptions>
+     None
+
+   <Side Effects>
+     This function results in one or more calls to randomfloat 
+     which uses a OS source of random data which is metered.
+
+   <Returns>
+     A string of num_bytes random bytes suitable for cryptographic use.
+  """
+  # To ensure accurate testing, this allows the source
+  # of random floats to be supplied.
+  if random_float is None: 
+    random_float = randomfloat()
+  
+  randombytes = ''
+  
+  # num_bytes/6 + 1 is used because at most a single float
+  # can only result in 6 bytes of random data. So an additional
+  # 6 bytes is added and them trimmed to the desired size.
+  for byte in range(num_bytes/6 + 1):
+    
+    # Convert the float back to a integer by multiplying
+    # it by 2**53, 53 is used because the expected precision
+    # of a python float will be a C type double with a 53 bit 
+    # coefficient, this will still depend on the implementation
+    # but the standard is to expect 53 bits.
+    randomint = int(random_float * (2**53)) 
+    # 53 bits trimmed down to 48bits
+    # and 48bits is equal to 6 bytes
+    randomint = randomint >> 5  
+    
+    # Transform the randomint into a byte string, 6 bytes were
+    # used to create this integer, but several of the leading 
+    # bytes could have been trimmed off in the process.
+    sixbytes = _random_long_to_bytes(randomint)
+    
+    # Add on the zeroes that should be there.
+    if len(sixbytes) < 6: 
+      # pad additions binary zeroes that were lost during 
+      # the floats creation.
+      sixbytes = '\x00'*(6-len(sixbytes)) + sixbytes 
+    randombytes += sixbytes
+  
+  return randombytes[6 - num_bytes % 6:]
+  
+  
+  
+def _random_long_to_bytes(long_int):
+  """
+  <Purpose>
+    Convert a long integer to a byte string.   
+    Used by random_randombytes to convert integers recovered
+    from random floats into its byte representation.
+    Used by random_randombytes, random_randombytes is responsible
+    for padding any required binary zeroes that are lost in the
+    conversion process.     
+  """
+
+  long_int = long(long_int)
+  byte_string = ''
+  temp_int = 0
+  
+  # Special case to ensure that a non-empty string
+  # is always returned.
+  if long_int == 0:
+    return '\000'
+  
+  while long_int > 0:
+    # Use a bitwise AND to get the last 8 bits from the long.
+    #    long_int  -->   1010... 010000001 (base 2)
+    #    0xFF      -->            11111111
+    #              _______________________
+    #  Bitwise AND result -->     10000001
+    tmp_int = long_int & 0xFF
+    # Place the new character at the front of the string.
+    byte_string = "%s%s" % (chr(tmp_int), byte_string)
+    # Bitshift the long because the trailing 8 bits have just been read.
+    long_int = long_int >> 8
+      
+  return byte_string
+
+
+
+def random_nbit_int(num_bits):  
+  """
+  <Purpose>
+    Returns an random integer that was constructed with
+    num_bits many random bits. The result will be an
+    integer [0, 2**(num_bits) - 1] inclusive.
+     
+    For Example:
+     If a 10bit number is needed, random_nbit_int(10).
+     Min should be greater or equal to 0
+     Max should be less than or equal to 1023
+
+    TODO-
+      This function currently uses random_randombytes as a source 
+      of random bytes, this is not a permanent fix (the extraction 
+      of random bytes from the float is not portable). The change will
+      likely be made to random_randombytes (since calls os.urandom will
+      likely be restricted to a limited number of bytes).
+
+  <Arguments>
+    num_bits:
+             The number of random bits to be used for construction
+             of the random integer to be returned.
+
+  <Exceptions>
+    TypeError if non-integer values for num_bits.
+      Will accept floats of the type 1.0, 2.0, ...
+    
+    ValueError if the num_bits is negative or 0.
+
+  <Side Effects>
+    This function results in one or more calls to randomfloat 
+    which uses a OS source of random data which is metered.
+
+  <Returns>
+    Returns a random integer between [0, 2**(num_bits) - 1] inclusive.
+  
+  <Walkthrough of functions operation>
+    This will be a step by step walk through of the key operations
+    defined in this function, with the largest possible
+    10 bit integer returned.
+    
+    num_bits = 10
+    
+    randstring = random_randombytes(10/8)  for our example we
+    will suppose that the byte returned was '\xff' (which is the
+    same as chr(255)).
+    
+    odd_bits = 10 % 8 = 2
+    Once again we assume that random_randombytes(1) returns the
+    maximum possible, which is '\xff'  
+    chr = ord('\xff') >> (8 - odd_bits)
+    -> chr = 255 >> (8 - 2)
+    -> chr = 255 >> 6 = 3   Note 3 is the largest 2 bit number
+    chr(3) is appended to randstring resulting in
+    randstring = '\x03\xff' 
+    
+    value = 0
+    length = 2
+    
+    STEP 1 (i = 0):
+      value = value << 8 
+      -> value = 0
+      value = value + ord(randstring[0])
+      -> value = 3
+    
+    STEP 2 (i = 1):
+      value = value << 8
+      -> value = 768
+      value = value + ord(randstring[1])
+      -> value = 1023
+    
+    return 1023
+    This is the maximum possible 10 bit integer.
+  """
+  if num_bits <= 0:
+    raise ValueError('number of bits must be greater than zero')
+  if num_bits != int(num_bits):
+    raise TypeError('number of bits should be an integer')
+  
+  # The number of bits requested may not be a multiple of
+  # 8, then an additional byte will trimmed down.
+  randstring = random_randombytes(num_bits/8)
+
+  odd_bits = num_bits % 8
+  # A single random byte be converted to an integer (which will
+  # be an element of [0,255]) it will then be shifted to the required
+  # number of bits.
+  # Example: if odd_bits = 3, then the 8 bit retrieved from the 
+  # single byte will be shifted right by 5.
+  if odd_bits != 0:
+    char = ord(random_randombytes(1)) >> (8 - odd_bits)
+    randstring = chr(char) + randstring
+  
+  # the random bytes in randstring will be read from left to right
+  result = 0L
+  length = len(randstring)
+  for i in range(0, length):
+    # While result = 0, the bitshift left will still result in 0
+    # Since we are dealing with integers, this does not result
+    # in the loss of any information.
+    result = (result << 8) 
+    result = result + ord(randstring[i]) 
+  
+  assert(result < (2 ** num_bits))
+  assert(result >= 0)
+
+  return result
+
+
+
+def random_int_below(upper_bound):
+  """
+  <Purpose>
+    Returns an random integer in the range [0,upper_bound)
+    
+    Handles the case where upper_bound has more bits than returned
+    by a single call to the underlying generator.
+     
+    For Example:
+     For a 10bit number, random_int_below(10).
+     results would be an element in of the set 0,1,2,..,9.
+     
+    NOTE: This function is a port from the random.py file in 
+    python 2.6.2. For large numbers I have experienced inconsistencies
+    when using a naive logarithm function to determine the
+    size of a number in bits.  
+
+  <Arguments>
+    upper_bound:
+           The random integer returned will be in [0, upper_bound).
+           Results will be integers less than this argument.
+
+  <Exceptions>
+    TypeError if non-integer values for upper_bound.
+    ValueError if the upper_bound is negative or 0.
+
+  <Side Effects>
+    This function results in one or more calls to randomfloat 
+    which uses a OS source of random data which is metered.
+
+  <Returns>
+    Returns a random integer between [0, upper_bound).
+  
+  """
+  
+  try:
+    upper_bound = int(upper_bound)
+  except ValueError:
+    raise TypeError('number should be an integer')
+  
+  if upper_bound <= 0:
+    raise ValueError('number must be greater than zero')
+  
+    
+  # If upper_bound == 1, the math_log call will loop infinitely.
+  # The only int in [0, 1) is 0 anyway, so return 0 here.
+  # Resolves bug #927
+  if upper_bound == 1:
+    return 0
+  
+  k = int(1.00001 + math_log(upper_bound - 1, 2.0))   # 2**k > n-1 > 2**(k-2)
+  r = random_nbit_int(k)
+  while r >= upper_bound:
+    r = random_nbit_int(k)
+  return r
+
+ 
+
+def random_randrange(start, stop=None, step=1):
+  """
+  <Purpose>
+    Choose a random item from range(start, stop[, step]).
+    
+  <Arguments>
+    start:
+      The random integer returned will be greater than
+      or equal to start. 
+  
+    stop:
+      The random integer returned will be less than stop.
+      Results will be integers less than this argument.
+
+    step:
+      Determines which elements from the range will be considered.
+     
+  <Exceptions>
+    ValueError:
+      Non-integer for start or stop argument
+      Empty range, if start < 0 and stop is None
+      Empty range
+      Zero or non-integer step for range
+
+  <Side Effects>
+    This function results in one or more calls to randomfloat 
+    which uses a OS source of randomdata which is metered.
+  
+  <Returns>
+    Random item from (start, stop[, step]) 'exclusive'
+    
+  <Notes on port>
+    This fixes the problem with randint() which includes the
+    endpoint; in Python this is usually not what you want.
+    
+    Anthony -I removed these since they do not apply
+      int=int, default=None, maxwidth=1L<<BPF
+      Do not supply the 'int', 'default', and 'maxwidth' arguments.
+  """
+  maxwidth = 1L<<53
+
+  # This code is a bit messy to make it fast for the
+  # common case while still doing adequate error checking.
+  istart = int(start)
+  if istart != start:
+    raise ValueError, "non-integer arg 1 for randrange()"
+  if stop is None:
+    if istart > 0:
+      if istart >= maxwidth:
+        return random_int_below(istart)
+      return int(randomfloat() * istart)
+    raise ValueError, "empty range for randrange()"
+
+  # stop argument supplied.
+  istop = int(stop)
+  if istop != stop:
+    raise ValueError, "non-integer stop for randrange()"
+  width = istop - istart
+  if step == 1 and width > 0:
+    # Note that
+    #     int(istart + self.random()*width)
+    # instead would be incorrect.  For example, consider istart
+    # = -2 and istop = 0.  Then the guts would be in
+    # -2.0 to 0.0 exclusive on both ends (ignoring that random()
+    # might return 0.0), and because int() truncates toward 0, the
+    # final result would be -1 or 0 (instead of -2 or -1).
+    #     istart + int(self.random()*width)
+    # would also be incorrect, for a subtler reason:  the RHS
+    # can return a long, and then randrange() would also return
+    # a long, but we're supposed to return an int (for backward
+    # compatibility).
+
+    if width >= maxwidth:
+      return int(istart + random_int_below(width))
+    return int(istart + int(randomfloat()*width))
+  if step == 1:
+    raise ValueError, "empty range for randrange() (%d,%d, %d)" % (istart, istop, width)
+
+  # Non-unit step argument supplied.
+  istep = int(step)
+  if istep != step:
+    raise ValueError, "non-integer step for randrange()"
+  if istep > 0:
+    n = (width + istep - 1) // istep
+  elif istep < 0:
+    n = (width + istep + 1) // istep
+  else:
+    raise ValueError, "zero step for randrange()"
+
+  if n <= 0:
+    raise ValueError, "empty range for randrange()"
+
+  if n >= maxwidth:
+    return istart + istep*random_int_below(n)
+  return istart + istep*int(randomfloat() * n)
+
+
+
+def random_randint(lower_bound, upper_bound):
+  """
+  <Purpose>
+    Return random integer in range [lower_bound, upper_bound], 
+    including both end points.
+    
+  <Arguments>
+    upper_bound:
+      The random integer returned will be less than upper_bound.
+    lower_bound:
+      The random integer returned will be greater than
+      or equal to the lower_bound.
+
+  <Exceptions>
+    None
+
+  <Side Effects>
+    This function results in one or more calls to randomfloat 
+    which uses a OS source of randomdata which is metered.
+  
+  <Returns>
+    Random integer from [lower_bound, upper_bound] 'inclusive'  
+  """
+  return random_randrange(lower_bound, upper_bound+1)
+
+
+
+def random_sample(population, k):
+  """
+  <Purpose>
+    To return a list containing a random sample from the population.
+    
+  <Arguments>
+    population:
+               The elements to be sampled from.
+    k: 
+      The number of elements to sample
+      
+  <Exceptions>
+    ValueError is sampler larger than population.
+    
+  <Side Effects>
+    This function results in one or more calls to randomfloat 
+    which uses a OS source of randomdata which is metered.
+    
+  <Returns>
+    A list of len(k) with random elements from the population.
+    
+  """
+  
+  newpopulation = population[:]
+  if len(population) < k:
+    raise ValueError, "sample larger than population"
+
+  retlist = []
+  populationsize = len(population)-1
+
+  for num in range(k):
+    pos = random_randint(0,populationsize-num)
+    retlist.append(newpopulation[pos])
+    del newpopulation[pos]
+
+  return retlist
+
+#end include random.repy
+
+
+
+
+
+
+
+#BUG: Do I need to compensate for the time taken to contact the time server?    (#353)
+def ntp_time_updatetime(localport):
+  """
+   <Purpose>
+    Obtains and stores the local time from a subset of NTP servers.
+
+   <Arguments>
+    localport:
+             The local port to be used when contacting the NTP server(s).
+
+   <Exceptions>
+    TimeError when getmyip() fails or one of the subset of NTP servers will not
+    respond.
+
+   <Side Effects>
+    time_settime(currenttime) is called as the subprocess of a subprocess, which
+    adjusts the current time.
+
+   <Returns>
+    None.
+  """
+
+  try:
+    ip = getmyip()
+  except Exception, e:
+    raise TimeError, str(e)
+
+  timeservers = ["time-a.nist.gov", "time-b.nist.gov", "time-a.timefreq.bldrdoc.gov", "time-b.timefreq.bldrdoc.gov", "time-c.timefreq.bldrdoc.gov", "utcnist.colorado.edu", "time.nist.gov", "time-nw.nist.gov", "nist1.symmetricom.com", "nist1-dc.WiTime.net", "nist1-ny.WiTime.net", "nist1-sj.WiTime.net", "nist1.aol-ca.symmetricom.com", "nist1.aol-va.symmetricom.com", "nist1.columbiacountyga.gov", "nist.expertsmi.com", "nist.netservicesgroup.com"]
+
+  listenhandle = recvmess(ip,localport, _time_decode_NTP_packet)
+  mycontext['ntp_time_got_time'] = False
+
+  # I'm going to get the time from up to 5 sources and then use the median
+  mycontext['ntp_time_received_times'] = []
+
+  # always close the handle before returning...
+  try: 
+    # try five random servers times...
+    for servername in random_sample(timeservers,5):
+
+      # this sends a request, version 3 in "client mode"
+      ntp_request_string = chr(27)+chr(0)*47
+      try: 
+        sendmess(servername,123, ntp_request_string, ip, localport) # 123 is the NTP port
+      except Exception:
+        # most likely a lookup error...
+        continue
+
+    # wait for 5 seconds for a response before retrying
+    for junkiterations in range(10):
+      sleep(.5)
+
+      if mycontext['ntp_time_got_time']:
+        # If we've had a response, we sleep one second, choose the time,
+        # and then quit
+        sleep(1)
+
+        # set the time...
+        _time_choose_NTP_time_to_settime()
+
+        # clean-up and return
+        stopcomm(listenhandle)
+        return
+    
+    
+  finally:
+    stopcomm(listenhandle)
+
+  # Failure, tried servers without luck...
+  raise TimeError, "Time Server update failed.  Perhaps retry later..."
+
+
+
+# We're choosing from a list of times to avoid problems like that in #879
+def _time_choose_NTP_time_to_settime():
+  timelist = mycontext['ntp_time_received_times'][:]
+
+  # this may happen if there are concurrent calls to update the time.
+  assert(len(timelist)>0)
+  
+  timelist.sort()
+  
+  # it's better to be slightly high than slightly low...  I'll set the time
+  # to be the middle element or if there is a tie, I'll choose the bigger 
+  # 'middle' element.   That means [1,2,3] would set 2, but [1,2,3,4] would
+  # set 3.   I can get this by integer division by 2...
+
+  time_settime(timelist[len(timelist) / 2])
+  
+
+
+
+### Do the conversion / decoding for NTP.   More details about the 
+### format of NTP are at RFC 2030 (http://www.ietf.org/rfc/rfc2030.txt)
+
+# this unpacks the data from the packet and changes it to a float
+def _time_convert_timestamp_to_float(timestamp):
+  integerpart = (ord(timestamp[0])<<24) + (ord(timestamp[1])<<16) + (ord(timestamp[2])<<8) + (ord(timestamp[3]))
+  floatpart = (ord(timestamp[4])<<24) + (ord(timestamp[5])<<16) + (ord(timestamp[6])<<8) + (ord(timestamp[7]))
+  return integerpart + floatpart / float(2**32)
+
+
+def _time_decode_NTP_packet(ip, port, mess, ch):
+  # I got a time response packet.   Remember it and notify that I got it.
+  mycontext['ntp_time_received_times'].append(_time_convert_timestamp_to_float(mess[40:48]))
+  mycontext['ntp_time_got_time'] = True
+
+
+#register the update method
+time_register_method('ntp',ntp_time_updatetime)
+
+#end include ntp_time.repy
+#begin include tcp_time.repy
+"""
+  Author: Zachary Boka
+    tcp_time.repy
+
+  Start Date:
+    3 May 2009
+    Amended 5 July, 2009 to be an extension to time.repy
+
+  Description:
+
+    This module is an implementation of time_interface.repy
+
+    Contacts a server running time_server.repy to get the current time from an
+    NTP because only the server can communicate with an NTP.
+
+    To use this module, make one call to time_updatetime() to get the
+    time from the server.  This function also implicitly sets the time.  Then
+    call time_gettime() every time the current time is needed.
+
+"""
+
+#begin include time_interface.repy
+#already included time_interface.repy
+#end include time_interface.repy
+
+#begin include advertise.repy
+"""
+<Program Name>
+  advertise.repy
+
+<Started>
+  October 14, 2008
+
+<Author>
+  Justin Cappos
+
+<Purpose>
+  Module which allows clients to send advertise queries to various servers.
+"""
+
+#begin include listops.repy
+""" 
+Author: Justin Cappos
+
+Module: A simple library of list commands that allow the programmer
+        to do list composition operations
+
+Start date: November 11th, 2008
+
+This is a really simple module, only broken out to avoid duplicating 
+functionality.
+
+This was adopted from previous code in seash.   
+
+I really should be using sets instead I think.   These are merely for 
+convenience when you already have lists.
+
+"""
+
+
+def listops_difference(list_a,list_b):
+  """
+   <Purpose>
+      Return a list that has all of the items in list_a that are not in list_b
+      Duplicates are removed from the output list
+
+   <Arguments>
+      list_a, list_b:
+        The lists to operate on
+
+   <Exceptions>
+      TypeError if list_a or list_b is not a list.
+
+   <Side Effects>
+      None.
+
+   <Returns>
+      A list containing list_a - list_b
+  """
+
+  retlist = []
+  for item in list_a:
+    if item not in list_b:
+      retlist.append(item)
+
+  # ensure that a duplicated item in list_a is only listed once
+  return listops_uniq(retlist)
+
+
+def listops_union(list_a,list_b):
+  """
+   <Purpose>
+      Return a list that has all of the items in list_a or in list_b.   
+      Duplicates are removed from the output list
+
+   <Arguments>
+      list_a, list_b:
+        The lists to operate on
+
+   <Exceptions>
+      TypeError if list_a or list_b is not a list.
+
+   <Side Effects>
+      None.
+
+   <Returns>
+      A list containing list_a union list_b
+  """
+
+  retlist = list_a[:]
+  for item in list_b: 
+    if item not in list_a:
+      retlist.append(item)
+
+  # ensure that a duplicated item in list_a is only listed once
+  return listops_uniq(retlist)
+
+
+def listops_intersect(list_a,list_b):
+  """
+   <Purpose>
+      Return a list that has all of the items in both list_a and list_b.   
+      Duplicates are removed from the output list
+
+   <Arguments>
+      list_a, list_b:
+        The lists to operate on
+
+   <Exceptions>
+      TypeError if list_a or list_b is not a list.
+
+   <Side Effects>
+      None.
+
+   <Returns>
+      A list containing list_a intersect list_b
+  """
+
+  retlist = []
+  for item in list_a:
+    if item in list_b:
+      retlist.append(item)
+
+  # ensure that a duplicated item in list_a is only listed once
+  return listops_uniq(retlist)
+      
+
+def listops_uniq(list_a):
+  """
+   <Purpose>
+      Return a list that has no duplicate items
+
+   <Arguments>
+      list_a
+        The list to operate on
+
+   <Exceptions>
+      TypeError if list_a is not a list.
+
+   <Side Effects>
+      None.
+
+   <Returns>
+      A list containing the unique items in list_a
+  """
+  retlist = []
+  for item in list_a:
+    if item not in retlist:
+      retlist.append(item)
+
+  return retlist
+
+
+
+#end include listops.repy
+#begin include centralizedadvertise.repy
+""" 
+Author: Justin Cappos
+
+Start Date: July 8, 2008
+
+Description:
+Advertisements to a central server (similar to openDHT)
+
+
+"""
+
+#begin include session.repy
+# This module wraps communications in a signaling protocol.   The purpose is to
+# overlay a connection-based protocol with explicit message signaling.   
+#
+# The protocol is to send the size of the message followed by \n and then the
+# message itself.   The size of a message must be able to be stored in 
+# sessionmaxdigits.   A size of -1 indicates that this side of the connection
+# should be considered closed.
+#
+# Note that the client will block while sending a message, and the receiver 
+# will block while recieving a message.   
+#
+# While it should be possible to reuse the connectionbased socket for other 
+# tasks so long as it does not overlap with the time periods when messages are 
+# being sent, this is inadvisable.
+
+class SessionEOF(Exception):
+  pass
+
+sessionmaxdigits = 20
+
+# get the next message off of the socket...
+def session_recvmessage(socketobj):
+
+  messagesizestring = ''
+  # first, read the number of characters...
+  for junkcount in range(sessionmaxdigits):
+    currentbyte = socketobj.recv(1)
+
+    if currentbyte == '\n':
+      break
+    
+    # not a valid digit
+    if currentbyte not in '0123456789' and messagesizestring != '' and currentbyte != '-':
+      raise ValueError, "Bad message size"
+     
+    messagesizestring = messagesizestring + currentbyte
+
+  else:
+    # too large
+    raise ValueError, "Bad message size"
+
+  try:
+    messagesize = int(messagesizestring)
+  except ValueError:
+    raise ValueError, "Bad message size"
+  
+  # nothing to read...
+  if messagesize == 0:
+    return ''
+
+  # end of messages
+  if messagesize == -1:
+    raise SessionEOF, "Connection Closed"
+
+  if messagesize < 0:
+    raise ValueError, "Bad message size"
+
+  data = ''
+  while len(data) < messagesize:
+    chunk =  socketobj.recv(messagesize-len(data))
+    if chunk == '': 
+      raise SessionEOF, "Connection Closed"
+    data = data + chunk
+
+  return data
+
+# a private helper function
+def session_sendhelper(socketobj,data):
+  sentlength = 0
+  # if I'm still missing some, continue to send (I could have used sendall
+  # instead but this isn't supported in repy currently)
+  while sentlength < len(data):
+    thissent = socketobj.send(data[sentlength:])
+    sentlength = sentlength + thissent
+
+
+
+# send the message 
+def session_sendmessage(socketobj,data):
+  header = str(len(data)) + '\n'
+  # Sending these piecemeal does not accomplish anything, and can contribute 
+  # to timeout issues when run by constantly overloaded machines.
+  # session_sendhelper(socketobj,header)
+
+  # Concatenate the header and data, rather than sending both separately.
+  complete_packet = header + data
+
+  # session_sendhelper(socketobj,data)
+
+  session_sendhelper(socketobj, complete_packet)
+
+
+#end include session.repy
+# I'll use socket timeout to prevent hanging when it takes a long time...
+#begin include sockettimeout.repy
+"""
+<Author>
+  Justin Cappos, Armon Dadgar
+  This is a rewrite of the previous version by Richard Jordan
+
+<Start Date>
+  26 Aug 2009
+
+<Description>
+  A library that causes sockets to timeout if a recv / send call would
+  block for more than an allotted amount of time.
+
+"""
+
+
+class SocketTimeoutError(Exception):
+  """The socket timed out before receiving a response"""
+
+
+class _timeout_socket():
+  """
+  <Purpose>
+    Provides a socket like object which supports custom timeouts
+    for send() and recv().
+  """
+
+  # Initialize with the socket object and a default timeout
+  def __init__(self,socket,timeout=10, checkintv='fibonacci'):
+    """
+    <Purpose>
+      Initializes a timeout socket object.
+
+    <Arguments>
+      socket:
+              A socket like object to wrap. Must support send,recv,close, and willblock.
+
+      timeout:
+              The default timeout for send() and recv().
+
+      checkintv:
+              How often socket operations (send,recv) should check if
+              they can run. The smaller the interval the more time is
+              spent busy waiting.
+    """
+    # Store the socket, timeout and check interval
+    self.socket = socket
+    self.timeout = timeout
+    self.checkintv = checkintv
+
+
+  # Allow changing the default timeout
+  def settimeout(self,timeout=10):
+    """
+    <Purpose>
+      Allows changing the default timeout interval.
+
+    <Arguments>
+      timeout:
+              The new default timeout interval. Defaults to 10.
+              Use 0 for no timeout. Given in seconds.
+
+    """
+    # Update
+    self.timeout = timeout
+  
+  
+  # Wrap willblock
+  def willblock(self):
+    """
+    See socket.willblock()
+    """
+    return self.socket.willblock()
+
+
+  # Wrap close
+  def close(self):
+    """
+    See socket.close()
+    """
+    return self.socket.close()
+
+
+  # Provide a recv() implementation
+  def recv(self,bytes,timeout=None):
+    """
+    <Purpose>
+      Allows receiving data from the socket object with a custom timeout.
+
+    <Arguments>
+      bytes:
+          The maximum amount of bytes to read
+
+      timeout:
+          (Optional) Defaults to the value given at initialization, or by settimeout.
+          If provided, the socket operation will timeout after this amount of time (sec).
+          Use 0 for no timeout.
+
+    <Exceptions>
+      As with socket.recv(), socket.willblock(). Additionally, SocketTimeoutError is
+      raised if the operation times out.
+
+    <Returns>
+      The data received from the socket.
+    """
+
+    # It's worth noting that this fibonacci backoff begins with a 2ms poll rate, and 
+    # provides a simple exponential backoff scheme.
+
+    fibonacci_backoff = False
+    backoff_cap = 100 # Never use more than 100ms poll rate.
+
+    pre_value = 1.0     # Our iterators for Fibonacci sequence.
+    pre_pre_value = 1.0 # 
+
+    # Since we want to be able to initialize with static poll rates (backwards 
+    # compatibility) we specify a string if we're using the fibonacci backoff.
+    if type(self.checkintv) is str:
+      if self.checkintv == 'fibonacci':
+        fibonacci_backoff = True
+
+    # Set the timeout if None
+    if timeout is None:
+      timeout = self.timeout
+
+    # Get the start time
+    starttime = getruntime()
+
+    # Block until we can read
+    rblock, wblock = self.socket.willblock()
+    while rblock:
+      # Check if we should break
+      if timeout > 0:
+        # Get the elapsed time
+        diff = getruntime() - starttime
+
+        # Raise an exception
+        if diff > timeout:
+          raise SocketTimeoutError,"recv() timed out!"
+
+      if fibonacci_backoff:
+        # Iterate the sequence once
+        sleep_length = pre_value + pre_pre_value
+        pre_pre_value = pre_value
+        pre_value = sleep_length
+
+        # Make sure we don't exceed maximum backoff.
+        if sleep_length > backoff_cap:
+          sleep_length = backoff_cap
+
+        # Unit conversion to seconds
+        sleep_length = sleep_length / 1000.0
+
+        # Sleep
+        sleep(sleep_length)
+      else: # Classic functionality.
+        # Sleep
+        try:
+          sleep(float(self.checkintv))
+        except:
+          sleep(0.1)
+
+      # If available, move to the next value of checkintv.
+      
+
+      # Update rblock
+      rblock, wblock = self.socket.willblock()
+
+    # Do the recv
+    return self.socket.recv(bytes)
+
+
+  # Provide a send() implementation
+  def send(self,data,timeout=None):
+    """
+    <Purpose>
+      Allows sending data with the socket object with a custom timeout.
+
+    <Arguments>
+      data:
+          The data to send
+
+      timeout:
+          (Optional) Defaults to the value given at initialization, or by settimeout.
+          If provided, the socket operation will timeout after this amount of time (sec).
+          Use 0 for no timeout.
+
+    <Exceptions>
+      As with socket.send(), socket.willblock(). Additionally, SocketTimeoutError is
+      raised if the operation times out.
+
+    <Returns>
+      The number of bytes sent.
+    """
+    # Set the timeout if None
+    if timeout is None:
+      timeout = self.timeout
+
+    # Get the start time
+    starttime = getruntime()
+
+    # Block until we can write
+    rblock, wblock = self.socket.willblock()
+    while wblock:
+      # Check if we should break
+      if timeout > 0:
+        # Get the elapsed time
+        diff = getruntime() - starttime
+
+        # Raise an exception
+        if diff > timeout:
+          raise SocketTimeoutError,"send() timed out!"
+
+      # Sleep
+      # Since switching to the fibonacci backoff, the nature of 
+      # this field has changed. Rather than implement the backoff 
+      # for checking block status (seems wasteful) we'll just use 
+      # a constant value. Ten ms seems appropriate.
+      sleep(0.010)
+
+      # Update rblock
+      rblock, wblock = self.socket.willblock()
+
+    # Do the recv
+    return self.socket.send(data) 
+
+
+
+
+def timeout_openconn(desthost, destport, localip=None, localport=None, timeout=5):
+  """
+  <Purpose> 
+    Wrapper for openconn.   Very, very similar
+
+  <Args>
+    Same as Repy openconn
+
+  <Exception>
+    Raises the same exceptions as openconn.
+
+  <Side Effects>
+    Creates a socket object for the user
+
+  <Returns>
+    socket obj on success
+  """
+
+  realsocketlikeobject = openconn(desthost, destport, localip, localport, timeout)
+
+  thissocketlikeobject = _timeout_socket(realsocketlikeobject, timeout)
+  return thissocketlikeobject
+
+
+
+
+
+def timeout_waitforconn(localip, localport, function, timeout=5):
+  """
+  <Purpose> 
+    Wrapper for waitforconn.   Essentially does the same thing...
+
+  <Args>
+    Same as Repy waitforconn with the addition of a timeout argument.
+
+  <Exceptions> 
+    Same as Repy waitforconn
+
+  <Side Effects>
+    Sets up event listener which calls function on messages.
+
+  <Returns>
+    Handle to listener.
+  """
+
+  # We use a closure for the callback we pass to waitforconn so that we don't
+  # have to map mainch's to callback functions or deal with potential race
+  # conditions if we did maintain such a mapping. 
+  def _timeout_waitforconn_callback(localip, localport, sockobj, ch, mainch):
+    # 'timeout' is the free variable 'timeout' that was the argument to
+    #  timeout_waitforconn.
+    thissocketlikeobject = _timeout_socket(sockobj, timeout)
+
+    # 'function' is the free variable 'function' that was the argument to
+    #  timeout_waitforconn.
+    return function(localip, localport, thissocketlikeobject, ch, mainch)
+
+  return waitforconn(localip, localport, _timeout_waitforconn_callback)
+
+  
+  
+
+
+# a wrapper for stopcomm
+def timeout_stopcomm(commhandle):
+  """
+    Wrapper for stopcomm.   Does the same thing...
+  """
+
+  return stopcomm(commhandle)
+  
+    
+
+
+#end include sockettimeout.repy
+#begin include serialize.repy
+"""
+Author: Justin Cappos
+
+
+Start date: October 9th, 2009
+
+Purpose: A simple library that serializes and deserializes built-in repy types.
+This includes strings, integers, floats, booleans, None, complex, tuples, 
+lists, sets, frozensets, and dictionaries.
+
+There are no plans for including objects.
+
+Note: that all items are treated as separate references.   This means things
+like 'a = []; a.append(a)' will result in an infinite loop.   If you have
+'b = []; c = (b,b)' then 'c[0] is c[1]' is True.   After deserialization 
+'c[0] is c[1]' is False.
+
+I can add support or detection of this if desired.
+"""
+
+# The basic idea is simple.   Say the type (a character) followed by the 
+# type specific data.    This is adequate for simple types
+# that do not contain other types.   Types that contain other types, have
+# a length indicator and then the underlying items listed sequentially.   
+# For a dict, this is key1value1key2value2.
+
+
+
+def serialize_serializedata(data):
+  """
+   <Purpose>
+      Convert a data item of any type into a string such that we can 
+      deserialize it later.
+
+   <Arguments>
+      data: the thing to seriailize.   Can be of essentially any type except
+            objects.
+
+   <Exceptions>
+      TypeError if the type of 'data' isn't allowed
+
+   <Side Effects>
+      None.
+
+   <Returns>
+      A string suitable for deserialization.
+  """
+
+  # this is essentially one huge case statement...
+
+  # None
+  if type(data) == type(None):
+    return 'N'
+
+  # Boolean
+  elif type(data) == type(True):
+    if data == True:
+      return 'BT'
+    else:
+      return 'BF'
+
+  # Integer / Long
+  elif type(data) is int or type(data) is long:
+    datastr = str(data) 
+    return 'I'+datastr
+
+
+  # Float
+  elif type(data) is float:
+    datastr = str(data) 
+    return 'F'+datastr
+
+
+  # Complex
+  elif type(data) is complex:
+    datastr = str(data) 
+    if datastr[0] == '(' and datastr[-1] == ')':
+      datastr = datastr[1:-1]
+    return 'C'+datastr
+
+
+
+  # String
+  elif type(data) is str:
+    return 'S'+data
+
+
+  # List or tuple or set or frozenset
+  elif type(data) is list or type(data) is tuple or type(data) is set or type(data) is frozenset:
+    # the only impact is the first letter...
+    if type(data) is list:
+      mystr = 'L'
+    elif type(data) is tuple:
+      mystr = 'T'
+    elif type(data) is set:
+      mystr = 's'
+    elif type(data) is frozenset:
+      mystr = 'f'
+    else:
+      raise Exception("InternalError: not a known type after checking")
+
+    for item in data:
+      thisitem = serialize_serializedata(item)
+      # Append the length of the item, plus ':', plus the item.   1 -> '2:I1'
+      mystr = mystr + str(len(thisitem))+":"+thisitem
+
+    mystr = mystr + '0:'
+
+    return mystr
+
+
+  # dict
+  elif type(data) is dict:
+    mystr = 'D'
+
+    keysstr = serialize_serializedata(data.keys())
+    # Append the length of the list, plus ':', plus the list.  
+    mystr = mystr + str(len(keysstr))+":"+keysstr
+    
+    # just plop the values on the end.
+    valuestr = serialize_serializedata(data.values())
+    mystr = mystr + valuestr
+
+    return mystr
+
+
+  # Unknown!!!
+  else:
+    raise TypeError("Unknown type '"+str(type(data))+"' for data :"+str(data))
+
+
+
+def serialize_deserializedata(datastr):
+  """
+   <Purpose>
+      Convert a serialized data string back into its original types.
+
+   <Arguments>
+      datastr: the string to deseriailize.
+
+   <Exceptions>
+      ValueError if the string is corrupted
+      TypeError if the type of 'data' isn't allowed
+
+   <Side Effects>
+      None.
+
+   <Returns>
+      Items of the original type
+  """
+
+  if type(datastr) != str:
+    raise TypeError("Cannot deserialize non-string of type '"+str(type(datastr))+"'")
+  typeindicator = datastr[0]
+  restofstring = datastr[1:]
+
+  # this is essentially one huge case statement...
+
+  # None
+  if typeindicator == 'N':
+    if restofstring != '':
+      raise ValueError("Malformed None string '"+restofstring+"'")
+    return None
+
+  # Boolean
+  elif typeindicator == 'B':
+    if restofstring == 'T':
+      return True
+    elif restofstring == 'F':
+      return False
+    raise ValueError("Malformed Boolean string '"+restofstring+"'")
+
+  # Integer / Long
+  elif typeindicator == 'I':
+    try:
+      return int(restofstring) 
+    except ValueError:
+      raise ValueError("Malformed Integer string '"+restofstring+"'")
+
+
+  # Float
+  elif typeindicator == 'F':
+    try:
+      return float(restofstring) 
+    except ValueError:
+      raise ValueError("Malformed Float string '"+restofstring+"'")
+
+  # Float
+  elif typeindicator == 'C':
+    try:
+      return complex(restofstring) 
+    except ValueError:
+      raise ValueError("Malformed Complex string '"+restofstring+"'")
+
+
+
+  # String
+  elif typeindicator == 'S':
+    return restofstring
+
+  # List / Tuple / set / frozenset / dict
+  elif typeindicator == 'L' or typeindicator == 'T' or typeindicator == 's' or typeindicator == 'f':
+    # We'll split this and keep adding items to the list.   At the end, we'll
+    # convert it to the right type
+
+    thislist = []
+
+    data = restofstring
+    # We'll use '0:' as our 'end separator'
+    while data != '0:':
+      lengthstr, restofdata = data.split(':', 1)
+      length = int(lengthstr)
+
+      # get this item, convert to a string, append to the list.
+      thisitemdata = restofdata[:length]
+      thisitem = serialize_deserializedata(thisitemdata)
+      thislist.append(thisitem)
+
+      # Now toss away the part we parsed.
+      data = restofdata[length:]
+
+    if typeindicator == 'L':
+      return thislist
+    elif typeindicator == 'T':
+      return tuple(thislist)
+    elif typeindicator == 's':
+      return set(thislist)
+    elif typeindicator == 'f':
+      return frozenset(thislist)
+    else:
+      raise Exception("InternalError: not a known type after checking")
+
+
+  elif typeindicator == 'D':
+
+    lengthstr, restofdata = restofstring.split(':', 1)
+    length = int(lengthstr)
+
+    # get this item, convert to a string, append to the list.
+    keysdata = restofdata[:length]
+    keys = serialize_deserializedata(keysdata)
+
+    # The rest should be the values list.
+    values = serialize_deserializedata(restofdata[length:])
+
+    if type(keys) != list or type(values) != list or len(keys) != len(values):
+      raise ValueError("Malformed Dict string '"+restofstring+"'")
+    
+    thisdict = {}
+    for position in xrange(len(keys)):
+      thisdict[keys[position]] = values[position]
+    
+    return thisdict
+
+
+
+
+  # Unknown!!!
+  else:
+    raise ValueError("Unknown typeindicator '"+str(typeindicator)+"' for data :"+str(restofstring))
+
+
+
+
+#end include serialize.repy
+
+
+# Hmm, perhaps I should make an initialization call instead of hardcoding this?
+# I suppose it doesn't matter since one can always override these values
+servername = "advertiseserver.poly.edu"
+# This port is updated to use the new port (legacy port is 10101)
+serverport = 10102
+
+
+
+
+class CentralAdvertiseError(Exception):
+  """Error when advertising a value to the central advertise service."""
+
+def centralizedadvertise_announce(key, value, ttlval):
+  """
+   <Purpose>
+     Announce a key / value pair into the CHT.
+
+   <Arguments>
+     key: the key to put the value under. This will be converted to a string.
+
+     value: the value to store at the key. This is also converted to a string.
+
+     ttlval: the amount of time until the value expires.   Must be an integer
+
+   <Exceptions>
+     TypeError if ttlval is of the wrong type.
+
+     ValueError if ttlval is not positive 
+
+     CentralAdvertiseError is raised the server response is corrupted
+
+     Various network and timeout exceptions are raised by timeout_openconn
+     and session_sendmessage / session_recvmessage
+
+   <Side Effects>
+     The CHT will store the key / value pair.
+
+   <Returns>
+     None
+  """
+  # do basic argument checking / munging
+  key = str(key)
+  value = str(value)
+
+  if not type(ttlval) is int and not type(ttlval) is long:
+    raise TypeError("Invalid type '"+str(type(ttlval))+"' for ttlval.")
+
+  if ttlval < 1:
+    raise ValueError("The argument ttlval must be positive, not '"+str(ttlval)+"'")
+
+  
+  # build the tuple to send, then convert to a string because only strings
+  # (bytes) can be transmitted over the network...
+  datatosend = ('PUT',key,value,ttlval)
+  datastringtosend = serialize_serializedata(datatosend)
+
+  
+  # send the data over a timeout socket using the session library, then
+  # get a response from the server.
+  sockobj = timeout_openconn(servername,serverport, timeout=10)
+  try:
+    session_sendmessage(sockobj, datastringtosend)
+    rawresponse = session_recvmessage(sockobj)
+  finally:
+    # BUG: This raises an error right now if the call times out ( #260 )
+    # This isn't a big problem, but it is the "wrong" exception
+    sockobj.close()
+  
+  # We should check that the response is 'OK'
+  try:
+    response = serialize_deserializedata(rawresponse)
+    if response != 'OK':
+      raise CentralAdvertiseError("Centralized announce failed with '"+response+"'")
+  except ValueError, e:
+    raise CentralAdvertiseError("Received unknown response from server '"+rawresponse+"'")
+      
+
+
+
+def centralizedadvertise_lookup(key, maxvals=100):
+  """
+   <Purpose>
+     Returns a list of valid values stored under a key
+
+   <Arguments>
+     key: the key to put the value under. This will be converted to a string.
+
+     maxvals: the maximum number of values to return.   Must be an integer
+
+   <Exceptions>
+     TypeError if maxvals is of the wrong type.
+
+     ValueError if maxvals is not a positive number
+
+     CentralAdvertiseError is raised the server response is corrupted
+
+     Various network and timeout exceptions are raised by timeout_openconn
+     and session_sendmessage / session_recvmessage
+
+   <Side Effects>
+     None
+
+   <Returns>
+     The list of values
+  """
+
+  # do basic argument checking / munging
+  key = str(key)
+
+  if not type(maxvals) is int and not type(maxvals) is long:
+    raise TypeError("Invalid type '"+str(type(maxvals))+"' for ttlval.")
+
+  if maxvals < 1:
+    raise ValueError("The argument ttlval must be positive, not '"+str(ttlval)+"'")
+
+  # build the tuple to send, then convert to a string because only strings
+  # (bytes) can be transmitted over the network...
+  messagetosend = ('GET',key,maxvals)
+  messagestringtosend = serialize_serializedata(messagetosend)
+
+
+  sockobj = timeout_openconn(servername,serverport, timeout=10)
+  try:
+    session_sendmessage(sockobj, messagestringtosend)
+    rawreceiveddata = session_recvmessage(sockobj)
+  finally:
+    # BUG: This raises an error right now if the call times out ( #260 )
+    # This isn't a big problem, but it is the "wrong" exception
+    sockobj.close()
+
+
+  try:
+    responsetuple = serialize_deserializedata(rawreceiveddata)
+  except ValueError, e:
+    raise CentralAdvertiseError("Received unknown response from server '"+rawresponse+"'")
+
+  # For a set of values, 'a','b','c',  I should see the response: 
+  # ('OK', ['a','b','c'])    Anything else is WRONG!!!
+  
+  if not type(responsetuple) is tuple:
+    raise CentralAdvertiseError("Received data is not a tuple '"+rawresponse+"'")
+
+  if len(responsetuple) != 2:
+    raise CentralAdvertiseError("Response tuple did not have exactly two elements '"+rawresponse+"'")
+  if responsetuple[0] != 'OK':
+    raise CentralAdvertiseError("Central server returns error '"+str(responsetuple)+"'")
+
+  
+  if not type(responsetuple[1]) is list:
+    raise CentralAdvertiseError("Received item is not a list '"+rawresponse+"'")
+
+  for responseitem in responsetuple[1]:
+    if not type(responseitem) is str:
+      raise CentralAdvertiseError("Received item '"+str(responseitem)+"' is not a string in '"+rawresponse+"'")
+
+  # okay, we *finally* seem to have what we expect...
+
+  return responsetuple[1]
+      
+
+#end include centralizedadvertise.repy
+#begin include centralizedadvertise_v2.repy
+""" 
+Author: Justin Cappos
+
+Start Date: July 8, 2008
+
+Description:
+Advertisements to a central server (similar to openDHT)
+
+
+"""
+
+#begin include session.repy
+#already included session.repy
+#end include session.repy
+# I'll use socket timeout to prevent hanging when it takes a long time...
+#begin include sockettimeout.repy
+#already included sockettimeout.repy
+#end include sockettimeout.repy
+#begin include serialize.repy
+#already included serialize.repy
+#end include serialize.repy
+
+
+# Hmm, perhaps I should make an initialization call instead of hardcoding this?
+# I suppose it doesn't matter since one can always override these values
+v2servername = "advertiseserver_v2.poly.edu"
+# This port is updated to use the new port (legacy port is 10101)
+v2serverport = 10102
+
+
+
+class CentralAdvertiseError(Exception):
+  """Error when advertising a value to the central advertise service."""
+
+def v2centralizedadvertise_announce(key, value, ttlval):
+  """
+   <Purpose>
+     Announce a key / value pair into the CHT.
+
+   <Arguments>
+     key: the key to put the value under. This will be converted to a string.
+
+     value: the value to store at the key. This is also converted to a string.
+
+     ttlval: the amount of time until the value expires.   Must be an integer
+
+   <Exceptions>
+     TypeError if ttlval is of the wrong type.
+
+     ValueError if ttlval is not positive 
+
+     CentralAdvertiseError is raised the server response is corrupted
+
+     Various network and timeout exceptions are raised by timeout_openconn
+     and session_sendmessage / session_recvmessage
+
+   <Side Effects>
+     The CHT will store the key / value pair.
+
+   <Returns>
+     None
+  """
+  # do basic argument checking / munging
+  key = str(key)
+  value = str(value)
+
+  if not type(ttlval) is int and not type(ttlval) is long:
+    raise TypeError("Invalid type '"+str(type(ttlval))+"' for ttlval.")
+
+  if ttlval < 1:
+    raise ValueError("The argument ttlval must be positive, not '"+str(ttlval)+"'")
+
+  
+  # build the tuple to send, then convert to a string because only strings
+  # (bytes) can be transmitted over the network...
+  datatosend = ('PUT',key,value,ttlval)
+  datastringtosend = serialize_serializedata(datatosend)
+
+  
+  # send the data over a timeout socket using the session library, then
+  # get a response from the server.
+  sockobj = timeout_openconn(v2servername,v2serverport, timeout=10)
+  try:
+    session_sendmessage(sockobj, datastringtosend)
+    rawresponse = session_recvmessage(sockobj)
+  finally:
+    # BUG: This raises an error right now if the call times out ( #260 )
+    # This isn't a big problem, but it is the "wrong" exception
+    sockobj.close()
+  
+  # We should check that the response is 'OK'
+  try:
+    response = serialize_deserializedata(rawresponse)
+    if response != 'OK':
+      raise CentralAdvertiseError("Centralized announce failed with '"+response+"'")
+  except ValueError, e:
+    raise CentralAdvertiseError("Received unknown response from server '"+rawresponse+"'")
+      
+
+
+
+def v2centralizedadvertise_lookup(key, maxvals=100):
+  """
+   <Purpose>
+     Returns a list of valid values stored under a key
+
+   <Arguments>
+     key: the key to put the value under. This will be converted to a string.
+
+     maxvals: the maximum number of values to return.   Must be an integer
+
+   <Exceptions>
+     TypeError if maxvals is of the wrong type.
+
+     ValueError if maxvals is not a positive number
+
+     CentralAdvertiseError is raised the server response is corrupted
+
+     Various network and timeout exceptions are raised by timeout_openconn
+     and session_sendmessage / session_recvmessage
+
+   <Side Effects>
+     None
+
+   <Returns>
+     The list of values
+  """
+
+  # do basic argument checking / munging
+  key = str(key)
+
+  if not type(maxvals) is int and not type(maxvals) is long:
+    raise TypeError("Invalid type '"+str(type(maxvals))+"' for ttlval.")
+
+  if maxvals < 1:
+    raise ValueError("The argument ttlval must be positive, not '"+str(ttlval)+"'")
+
+  # build the tuple to send, then convert to a string because only strings
+  # (bytes) can be transmitted over the network...
+  messagetosend = ('GET',key,maxvals)
+  messagestringtosend = serialize_serializedata(messagetosend)
+
+
+  sockobj = timeout_openconn(v2servername,v2serverport, timeout=10)
+  try:
+    session_sendmessage(sockobj, messagestringtosend)
+    rawreceiveddata = session_recvmessage(sockobj)
+  finally:
+    # BUG: This raises an error right now if the call times out ( #260 )
+    # This isn't a big problem, but it is the "wrong" exception
+    sockobj.close()
+
+
+  try:
+    responsetuple = serialize_deserializedata(rawreceiveddata)
+  except ValueError, e:
+    raise CentralAdvertiseError("Received unknown response from server '"+rawresponse+"'")
+
+  # For a set of values, 'a','b','c',  I should see the response: 
+  # ('OK', ['a','b','c'])    Anything else is WRONG!!!
+  
+  if not type(responsetuple) is tuple:
+    raise CentralAdvertiseError("Received data is not a tuple '"+rawresponse+"'")
+
+  if len(responsetuple) != 2:
+    raise CentralAdvertiseError("Response tuple did not have exactly two elements '"+rawresponse+"'")
+  if responsetuple[0] != 'OK':
+    raise CentralAdvertiseError("Central server returns error '"+str(responsetuple)+"'")
+
+  
+  if not type(responsetuple[1]) is list:
+    raise CentralAdvertiseError("Received item is not a list '"+rawresponse+"'")
+
+  for responseitem in responsetuple[1]:
+    if not type(responseitem) is str:
+      raise CentralAdvertiseError("Received item '"+str(responseitem)+"' is not a string in '"+rawresponse+"'")
+
+  # okay, we *finally* seem to have what we expect...
+
+  return responsetuple[1]
+      
+
+#end include centralizedadvertise_v2.repy
+#begin include DORadvertise.repy
+"""
+Author: Conrad Meyer
+
+Start Date: Wed Dec 9 2009
+
+Description:
+Advertisements to the Digital Object Registry run by CNRI.
+
+"""
+
+
+
+
+#begin include sockettimeout.repy
+#already included sockettimeout.repy
+#end include sockettimeout.repy
+#begin include httpretrieve.repy
+"""
+<Program Name>
+  httpretrieve.repy
+
+<Started>
+  August 19, 2009
+
+<Authors>
+  Yafete Yemuru
+  Conrad Meyer
+  
+<Purpose>
+  Provides a method for retrieving content from web servers using the HTTP
+  protocol. The content can be accessed as a file like object, or saved to
+  a file or returned as a string.
+"""
+
+
+
+#begin include urlparse.repy
+"""
+<Program Name>
+  urlparse.repy
+
+<Started>
+  May 15, 2009
+
+<Author>
+  Michael Phan-Ba
+
+<Purpose>
+  Provides utilities for parsing URLs, based on the Python 2.6.1 module urlparse.
+
+"""
+
+
+def urlparse_urlsplit(urlstring, default_scheme="", allow_fragments=True):
+  """
+  <Purpose>
+    Parse a URL into five components, returning a dictionary.  This corresponds
+    to the general structure of a URL:
+    scheme://netloc/path;parameters?query#fragment.  The parameters are not
+    split from the URL and individual componenets are not separated.
+
+    Only absolute server-based URIs are currently supported (all URLs will be
+    parsed into the components listed, regardless of the scheme).
+
+  <Arguments>
+    default_scheme:
+      Optional: defaults to the empty string.  If specified, gives the default
+      addressing scheme, to be used only if the URL does not specify one.
+
+    allow_fragments:
+      Optional: defaults to True.  If False, fragment identifiers are not
+      allowed, even if the URL's addressing scheme normally does support them.
+
+  <Exceptions>
+    ValueError on parsing a non-numeric port value.
+
+  <Side Effects>
+    None.
+
+  <Returns>
+    A dictionary containing:
+
+    Key         Value                               Value if not present
+    ============================================================================
+    scheme      URL scheme specifier                empty string
+    netloc      Network location part               empty string
+    path        Hierarchical path                   empty string
+    query       Query component                     empty string
+    fragment    Fragment identifier                 empty string
+    username    User name                           None
+    password    Password                            None
+    hostname    Host name (lower case)              None
+    port        Port number as integer, if present  None
+
+  """
+
+  components = {"scheme": default_scheme, "netloc": "", "path": "", "query": "",
+    "fragment": "", "username": None, "password": None, "hostname": None,
+    "port": None }
+
+  # Extract the scheme, if present.
+  (lpart, rpart) = _urlparse_splitscheme(urlstring)
+  if lpart:
+    components["scheme"] = lpart
+
+  # Extract the server information, if present.
+  if rpart.startswith("//"):
+    (lpart, rpart) = _urlparse_splitnetloc(rpart, 2)
+    components["netloc"] = lpart
+
+    (components["username"], components["password"], components["hostname"],
+      components["port"]) = _urlparse_splitauthority(lpart)
+
+  # Extract the fragment.
+  if allow_fragments:
+    (rpart, components["fragment"]) = _urlparse_splitfragment(rpart)
+
+
+  # Extract the query.
+  (components["path"], components["query"]) = _urlparse_splitquery(rpart)
+
+  return components
+
+
+def _urlparse_splitscheme(url):
+  """Parse the scheme portion of the URL"""
+  # The scheme is valid only if it contains these characters.
+  scheme_chars = \
+    "abcdefghijklmnopqrstuvwxyz0123456789+-."
+
+  scheme = ""
+  rest = url
+
+  spart = url.split(":", 1)
+  if len(spart) == 2:
+
+    # Normalize the scheme.
+    spart[0] = spart[0].lower()
+
+    # A scheme is valid only if it starts with an alpha character.
+    if spart[0] and spart[0][0].isalpha():
+      for char in spart[0]:
+        if char not in scheme_chars:
+          break
+      (scheme, rest) = spart
+
+  return scheme, rest
+
+
+def _urlparse_splitnetloc(url, start=0):
+  """Parse the netloc portion of the URL"""
+
+  # By default, the netloc is delimited by the end of the URL.
+  delim = len(url)
+
+  # Find the left-most delimiter.
+  for char in "/?#":
+    xdelim = url.find(char, start)
+    if xdelim >= 0:
+      delim = min(delim, xdelim)
+
+  # Return the netloc and the rest of the URL.
+  return url[start:delim], url[delim:]
+
+
+def _urlparse_splitauthority(netloc):
+  """Parse the authority portion of the netloc"""
+
+  # The authority can have a userinfo portion delimited by "@".
+  authority = netloc.split("@", 1)
+
+  # Default values.
+  username = None
+  password = None
+  hostname = None
+  port = None
+
+  # Is there a userinfo portion?
+  if len(authority) == 2:
+
+    # userinfo can be split into username:password
+    userinfo = authority[0].split(":", 1)
+
+    # hostport can be split into hostname:port
+    hostport = authority[1].split(":", 1)
+
+    if userinfo[0]:
+      username = userinfo[0]
+    if len(userinfo) == 2:
+      password = userinfo[1]
+
+  # No userinfo portion found.
+  else:
+
+    # hostport can be split into hostname:port
+    hostport = netloc.split(":", 1)
+
+  # Is there a port value?
+  if hostport[0]:
+    hostname = hostport[0]
+  if len(hostport) == 2:
+    port = int(hostport[1], 10)
+
+  # Return the values.
+  return username, password, hostname, port
+
+
+def _urlparse_splitquery(url):
+  """Parse the query portion of the url"""
+
+  qpart = url.split("?", 1)
+  if len(qpart) == 2:
+    query = qpart[1]
+  else:
+    query = ""
+
+  return qpart[0], query
+
+
+def _urlparse_splitfragment(url):
+  """Parse the query portion of the url"""
+
+  fpart = url.split("#", 1)
+  if len(fpart) == 2:
+    fragment = fpart[1]
+  else:
+    fragment = ""
+
+  return fpart[0], fragment
+
+#end include urlparse.repy
+#begin include sockettimeout.repy
+#already included sockettimeout.repy
+#end include sockettimeout.repy
+#begin include urllib.repy
+def urllib_quote(inputstring, safestring="/"):
+  """
+  <Purpose>
+    Encode an inputstring such that it can be used safely in a URL or XML
+    document.
+
+  <Arguments>
+    inputstring:
+           The string to urlencode.
+
+    safestring (optional):
+           Specifies additional characters that should not be quoted --
+           defaults to "/".
+
+  <Exceptions>
+    TypeError if the inputstring or safestring parameters aren't strings.
+
+  <Side Effects>
+    None.
+
+  <Returns>
+    Urlencoded version of the passed string.
+  """
+
+  if type(inputstring) is not str:
+    raise TypeError("urllib_quote's inputstring parameter must be a string, not '"+str(type(inputstring))+"'")
+  if type(safestring) is not str:
+    raise TypeError("urllib_quote's safestring parameter must be a string, not '"+str(type(safestring))+"'")
+  
+
+  resultstr = ""
+
+  # We go through each character in the string; if it's not in [0-9a-zA-Z]
+  # we wrap it.
+
+  safeset = set(safestring)
+
+  for char in inputstring:
+    asciicode = ord(char)
+    if (asciicode >= ord("0") and asciicode <= ord("9")) or \
+        (asciicode >= ord("A") and asciicode <= ord("Z")) or \
+        (asciicode >= ord("a") and asciicode <= ord("z")) or \
+        asciicode == ord("_") or asciicode == ord(".") or \
+        asciicode == ord("-") or char in safeset:
+      resultstr += char
+    else:
+      resultstr += "%%%02X" % asciicode
+
+  return resultstr
+
+
+
+
+def urllib_quote_plus(inputstring, safestring=""):
+  """
+  <Purpose>
+    Encode a string to go in the query fragment of a URL.
+
+  <Arguments>
+    inputstring:
+           The string to urlencode.
+
+    safestring (optional):
+           Specifies additional characters that should not be quoted --
+           defaults to the empty string.
+
+  <Exceptions>
+    TypeError if the inputstring or safestring parameters aren't strings.
+
+  <Side Effects>
+    None.
+
+  <Returns>
+    Urlencoded version of the passed string.
+  """
+
+  if type(inputstring) is not str:
+    raise TypeError("urllib_quote_plus' inputstring parameter must be a string, not '"+str(type(inputstring))+"'")
+  if type(safestring) is not str:
+    raise TypeError("urllib_quote_plus' safestring parameter must be a string, not '"+str(type(safestring))+"'")
+  
+
+  return urllib_quote(inputstring, safestring + " ").replace(" ", "+")
+
+
+
+
+def urllib_unquote(inputstring):
+  """
+  <Purpose>
+    Unquote a urlencoded string.
+
+  <Arguments>
+    inputstring:
+           The string to unquote.
+
+  <Exceptions>
+    TypeError if the inputstring isn't a string
+    ValueError thrown if the last wrapped octet isn't a valid wrapped octet
+    (i.e. if the string ends in "%" or "%x" rather than "%xx". Also throws
+    ValueError if the nibbles aren't valid hex digits.
+
+  <Side Effects>
+    None.
+
+  <Returns>
+    The decoded string.
+  """
+
+  if type(inputstring) is not str:
+    raise TypeError("urllib_unquote's inputstring parameter must be a string, not '"+str(type(inputstring))+"'")
+  
+
+  resultstr = ""
+
+  # We go through the inputstring from end to beginning, looking for wrapped
+  # octets. When one is found we add it (unwrapped) and the following
+  # string to the resultant string, and shorten the original inputstring.
+
+  while True:
+    lastpercentlocation = inputstring.rfind("%")
+    if lastpercentlocation < 0:
+      break
+
+    wrappedoctetstr = inputstring[lastpercentlocation+1:lastpercentlocation+3]
+    if len(wrappedoctetstr) != 2:
+      raise ValueError("Quoted string is poorly formed")
+
+    resultstr = \
+        chr(int(wrappedoctetstr, 16)) + \
+        inputstring[lastpercentlocation+3:] + \
+        resultstr
+    inputstring = inputstring[:lastpercentlocation]
+
+  resultstr = inputstring + resultstr
+  return resultstr
+
+
+
+
+def urllib_unquote_plus(inputstring):
+  """
+  <Purpose>
+    Unquote the urlencoded query fragment of a URL.
+
+  <Arguments>
+    inputstring:
+           The string to unquote.
+
+  <Exceptions>
+    TypeError if the inputstring isn't a string
+    ValueError thrown if the last wrapped octet isn't a valid wrapped octet
+    (i.e. if the inputstring ends in "%" or "%x" rather than "%xx". Also throws
+    ValueError if the nibbles aren't valid hex digits.
+
+  <Side Effects>
+    None.
+
+  <Returns>
+    The decoded string.
+  """
+  if type(inputstring) is not str:
+    raise TypeError("urllib_unquote_plus' inputstring parameter must be a string, not '"+str(type(inputstring))+"'")
+
+  return urllib_unquote(inputstring.replace("+", " "))
+
+
+
+
+def urllib_quote_parameters(inputdictionary):
+  """
+  <Purpose>
+    Encode a dictionary of (key, value) pairs into an HTTP query string or
+    POST body (same form).
+
+  <Arguments>
+    dictionary:
+           The dictionary to quote.
+
+  <Exceptions>
+    TypeError if the inputdictionary isn't a dict.
+
+  <Side Effects>
+    None.
+
+  <Returns>
+    The quoted dictionary.
+  """
+  if type(inputdictionary) is not dict:
+    raise TypeError("urllib_quote_parameters' inputstringdictionary parameter must be a dict, not '"+str(type(inputstring))+"'")
+
+  quoted_keyvals = []
+  for key, val in inputdictionary.items():
+    quoted_keyvals.append("%s=%s" % (urllib_quote(key), urllib_quote(val)))
+
+  return "&".join(quoted_keyvals)
+
+
+
+
+def urllib_unquote_parameters(inputstring):
+  """
+  <Purpose>
+    Decode a urlencoded query string or POST body.
+
+  <Arguments>
+    inputstring:
+           The string to decode.
+
+  <Exceptions>
+    TypeError if the inputstring isn't a string
+    ValueError if the inputstring is poorly formed.
+
+  <Side Effects>
+    None.
+
+  <Returns>
+    A dictionary mapping keys to values.
+  """
+
+  if type(inputstring) is not str:
+    raise TypeError("urllib_unquote_parameters' inputstring parameter must be a string, not '"+str(type(inputstring))+"'")
+
+  keyvalpairs = inputstring.split("&")
+  res = {}
+
+  for quotedkeyval in keyvalpairs:
+    # Throw ValueError if there is more or less than one '='.
+    quotedkey, quotedval = quotedkeyval.split("=")
+    key = urllib_unquote_plus(quotedkey)
+    val = urllib_unquote_plus(quotedval)
+    res[key] = val
+
+  return res
+
+#end include urllib.repy
+
+
+
+class HttpConnectionError(Exception):
+  """
+  Error indicating that the web server has unexpectedly dropped the
+  connection.
+  """
+
+
+
+
+class HttpBrokenServerError(Exception):
+  """
+  Error indicating that the web server has sent us complete garbage instead
+  of something resembling HTTP.
+  """
+
+
+
+
+def httpretrieve_open(url, querydata=None, postdata=None,\
+    httpheaders=None, proxy=None, timeout=None):
+  """
+  <Purpose>
+     Returns a file-like object that can be used to read the content from
+     an HTTP server. Follows 3xx redirects.
+
+  <Arguments>
+    url:
+           The URL to perform a GET or POST request on.
+    postdata (optional):
+           A dictionary of form data or a string to POST to the server.
+           Passing a non-None value results in a POST request being sent
+           to the server.
+    querydata (optional):
+           A dictionary of form data or a string to send as the query
+           string to the server.
+
+           If postdata is omitted, the URL is retrieved with GET. If
+           both postdata and querydata are omitted, there is no query
+           string sent in the request.
+
+           For both querydata and postdata, strings are sent *unmodified*.
+           This means you probably should encode them first, with
+           urllib_quote().
+    httpheaders (optional):
+           A dictionary of supplemental HTTP request headers to add to the
+           request.
+    proxy (optional):
+           A proxy server 2-tuple to bind to: ('host', port).       
+    timeout (optional):
+           A timeout for establishing a connection to the web server,
+           sending headers, and reading the response headers.
+
+           If excluded or None, never times out.
+
+  <Exceptions>
+    ValueError if given an invalid URL, or malformed limit or timeout
+      values. This is also raised if the user attempts to call a method
+      on the file-like object after closing it.
+
+    HttpConnectionError if opening the connection fails, or if the
+      connection is closed by the server before we expect.
+
+    SocketTimeoutError if the timeout is exceeded.
+
+    HttpBrokenServerError if the response or the Location response header
+      is malformed.
+
+  <Side Effects>
+    None
+
+  <Returns>
+    Returns a file-like object which can be used to read the body of
+    the response from the web server. The protocol version spoken by the
+    server, status code, and response headers are available as members of
+    the object.
+  """
+
+  starttimefloat = getruntime()
+
+  # Check if the URL is valid and get host, path, port and query
+  parsedurldict = urlparse_urlsplit(url)
+  hoststr = parsedurldict['hostname']
+  pathstr = parsedurldict['path']
+  portint = parsedurldict.get('port')
+  portint = portint or 80
+
+  if parsedurldict['scheme'] != 'http':
+    raise ValueError("URL doesn't seem to be for the HTTP protocol.")
+  if hoststr is None:
+    raise ValueError("Missing hostname.")
+  if parsedurldict['query'] is not None and parsedurldict['query'] != "":
+    raise ValueError("URL cannot include a query string.")
+
+  # Typical HTTP sessions consist of (optionally, a series of pairs of) HTTP
+  # requests followed by HTTP responses. These happen serially.
+
+  # JAC: Set this up so that we can raise the right error if the 
+  # timeout_openconn doesn't work.
+  sockobj = None
+
+  # Open connection to the web server
+  try:
+    if proxy is not None:
+      # if there is a proxy, open a connection with the proxy instead of the actual server
+      # use the timeout we are given (or none)
+      sockobj = timeout_openconn(proxy[0], proxy[1], timeout=timeout)  
+    else:
+      # if there is no proxy open a connection with server directly
+      # use the timeout we are given (or none)
+      sockobj = timeout_openconn(hoststr, portint, timeout=timeout)
+
+  except Exception, e:
+    # If a socket object was created, we want to clean in up.
+    if sockobj:
+      sockobj.close()
+
+    if repr(e).startswith("timeout("):
+      raise HttpConnectionError("Socket timed out connecting to host/port.")
+    raise
+
+  try:
+    # Builds the HTTP request:
+    httprequeststr = _httpretrieve_build_request(hoststr, portint, pathstr, \
+        querydata, postdata, httpheaders, proxy)
+
+    # Send the full HTTP request to the web server.
+    _httpretrieve_sendall(sockobj, httprequeststr)
+
+    # Now, we're done with the HTTP request part of the session, and we need
+    # to get the HTTP response.
+
+    # Check if we've timed out (if the user requested a timeout); update the
+    # socket timeout to reflect the time taken sending the request.
+    if timeout is None:
+      sockobj.settimeout(0)
+    elif getruntime() - starttimefloat >= timeout:
+      raise SocketTimeoutError("Timed out")
+    else:
+      sockobj.settimeout(timeout - (getruntime() - starttimefloat))
+
+    # Receive the header lines from the web server (a series of CRLF-terminated
+    # lines, terminated by an empty line, or by the server closing the
+    # connection.
+    headersstr = ""
+    while not headersstr.endswith("\r\n\r\n"):
+      try:
+        # This should probably be replaced with page-sized reads in the future,
+        # but for now, the behavior is at least correct.
+        headersstr += sockobj.recv(1)
+      except Exception, e:
+        if str(e) == "Socket closed":
+          break
+        else:
+          raise
+
+    httpheaderlist = headersstr.split("\r\n")
+    # Ignore (a) trailing blank line(s) (for example, the response header-
+    # terminating blank line).
+    while len(httpheaderlist) > 0 and httpheaderlist[-1] == "":
+      httpheaderlist = httpheaderlist[:-1]
+
+    # Get the status code and status message from the HTTP response.
+    statuslinestr, httpheaderlist = httpheaderlist[0], httpheaderlist[1:]
+
+    # The status line should be in the form: "HTTP/1.X NNN SSSSS", where
+    # X is 0 or 1, NNN is a 3-digit status code, and SSSSS is a 'user-friendly'
+    # string representation of the status code (may contain spaces).
+    statuslinelist = statuslinestr.split(' ', 2)
+
+    if len(statuslinelist) < 3:
+      raise HttpBrokenServerError("Server returned garbage for HTTP " + \
+        "response (status line missing one or more fields).")
+
+    if not statuslinelist[0].startswith('HTTP'):
+      raise HttpBrokenServerError("Server returned garbage for HTTP " + \
+          "response (invalid response protocol in status line).")
+
+    friendlystatusstr = statuslinelist[2]
+    try:
+      statusint = int(statuslinelist[1])
+    except ValueError, e:
+      raise HttpBrokenServerError("Server returned garbage for HTTP " + \
+        "response (status code isn't integer).")
+
+    httpheaderdict = _httpretrieve_parse_responseheaders(httpheaderlist)
+
+    # If we got any sort of redirect response, follow the redirect. Note: we
+    # do *not* handle the 305 status code (use the proxy as specified in the
+    # Location header) at all; I think this is best handled at a higher layer
+    # anyway.
+    if statusint in (301, 302, 303, 307):
+      sockobj.close()
+      try:
+        redirecturlstr = httpheaderdict["Location"][0]
+      except (KeyError, IndexError), ke:
+        # When a server returns a redirect status code (3xx) but no Location
+        # header, some clients, e.g. Firefox, just show the response body
+        # as they would normally for a 2xx or 4xx response. So, I think we
+        # should ignore a missing Location header and just return the page
+        # to the caller.
+        pass
+      else:
+        # If the server did send a redirect location, let's go there.
+        return httpretrieve_open(redirecturlstr)
+
+    # If we weren't requested to redirect, and we didn't, return a read-only
+    # file-like object (representing the response body) to the caller.
+    return _httpretrieve_filelikeobject(sockobj, httpheaderdict, \
+        (statuslinelist[0], statusint, friendlystatusstr))
+  
+  except:
+    # If any exception occured after the socket was open, we want to make
+    # sure that the socket is cleaned up if it is still open before we
+    # raise the exception.
+    if sockobj:
+      sockobj.close()
+
+    raise
+
+
+
+def httpretrieve_save_file(url, filename, querydata=None, postdata=None, \
+    httpheaders=None, proxy=None, timeout=None):
+  """
+  <Purpose>
+    Perform an HTTP request, and save the content of the response to a
+    file.
+
+  <Arguments>
+    filename:
+           The file name to save the response to.
+    Other arguments:
+           See documentation for httpretrieve_open().
+
+  <Exceptions>
+    This function will raise any exception raised by Repy file objects
+    in opening, writing to, and closing the file.
+
+    This function will all also raise any exception raised by
+    httpretrieve_open(), for the same reasons.
+
+  <Side Effects>
+    Writes the body of the response to 'filename'.
+
+  <Returns>
+    None
+  """
+
+  # Open the output file object and http file-like object.
+  outfileobj = open(filename, 'w')
+  httpobj = httpretrieve_open(url, querydata=querydata, postdata=postdata, \
+      httpheaders=httpheaders, proxy=proxy, timeout=timeout)
+
+  # Repeatedly read from the file-like HTTP object into our file, until the
+  # response is finished.
+  responsechunkstr = None
+  while responsechunkstr != '':
+    responsechunkstr = httpobj.read(4096)
+    outfileobj.write(responsechunkstr)
+
+  outfileobj.close()
+  httpobj.close()
+
+
+
+
+def httpretrieve_get_string(url, querydata=None, postdata=None, \
+    httpheaders=None, proxy=None, timeout=30):
+  """
+  <Purpose>
+    Performs an HTTP request on the given URL, using POST or GET,
+    returning the content of the response as a string. Uses
+    httpretrieve_open.
+
+  <Arguments>
+    See httpretrieve_open.
+
+  <Exceptions>
+    See httpretrieve_open.
+
+  <Side Effects>
+    None.
+
+  <Returns>
+    Returns the body of the HTTP response (no headers).
+  """
+
+  # Open a read-only file-like object for the HTTP request.
+  httpobj = httpretrieve_open(url, querydata=querydata, postdata=postdata, \
+      httpheaders=httpheaders, proxy=proxy, timeout=timeout)
+
+  # Read all of the response and return it.
+  try:
+    return httpobj.read()
+  finally:
+    httpobj.close()
+
+
+
+
+class _httpretrieve_filelikeobject:
+  # This class implements a file-like object used for performing HTTP
+  # requests and retrieving responses.
+
+  def __init__(self, sock, headers, httpstatus):
+    # The socket-like object connected to the HTTP server. Headers have
+    # already been read.
+    self._sockobj = sock
+
+    # If this is set, the close() method has already been called, so we
+    # don't accept future reads.
+    self._fileobjclosed = False
+
+    # This flag is set if we've finished recieving the entire response
+    # from the server.
+    self._totalcontentisreceived = False
+
+    # This integer represents the number of bytes read so far.
+    self._totalread = 0
+
+    # This is the dictionary of HTTP response headers associated with this
+    # file-like object.
+    self.headers = headers
+
+    # The HTTP status tuple of this response, e.g. ("HTTP/1.0", 200, "OK")
+    self.httpstatus = httpstatus
+
+
+
+  def read(self, limit=None, timeout=None):
+    """
+    <Purpose>
+      Behaves like Python's file.read(), with the potential to raise
+      additional informative exceptions.
+
+    <Arguments>
+      limit (optional):
+            The maximum amount of data to read. If omitted or None, this
+            reads all available data.
+
+    <Exceptions>
+      See file.read()'s documentation, as well as that of
+      httpretrieve_open().
+
+    <Side Effects>
+      None.
+
+    <Returns>
+      See file.read().
+    """
+
+    # Raise an error if the caller has already close()d this object.
+    if self._fileobjclosed:
+      raise ValueError("I/O operation on closed file")
+
+    # If we've finished reading everything we can from the server, return the
+    # empty string.
+    if self._totalcontentisreceived:
+      return ''
+
+    lefttoread = None
+    if limit is not None:
+      lefttoread = limit
+
+      # Sanity check type/value of limit.
+      if type(limit) is not int:
+        raise TypeError("Expected an integer or None for read() limit")
+      elif limit < 0:
+        raise ValueError("Expected a non-negative integer for read() limit")
+
+    if timeout is None:
+      self._sockobj.settimeout(0)
+    else:
+      self._sockobj.settimeout(timeout)
+
+    # Try to read up to limit, or until there is nothing left.
+    httpcontentstr = ''
+    while True:
+      try:
+        contentchunkstr = self._sockobj.recv(lefttoread or 4096)
+      except Exception, e:
+        if str(e) == "Socket closed":
+          self._totalcontentisreceived = True
+          break
+        else:
+          raise
+      
+      httpcontentstr += contentchunkstr
+      self._totalread += len(contentchunkstr)
+      if limit is not None:
+        if len(contentchunkstr) == lefttoread:
+          break
+        else:
+          lefttoread -= len(contentchunkstr)
+      if contentchunkstr == "":
+        self._totalcontentisreceived = True
+        break
+
+    return httpcontentstr
+
+
+
+  def close(self):
+    """
+    <Purpose>
+      Close the file-like object.
+
+    <Arguments>
+      None
+
+    <Exceptions>
+      None
+
+    <Side Effects>
+      Disconnects from the HTTP server.
+
+    <Returns>
+      Nothing
+    """
+    self._fileobjclosed = True
+    self._sockobj.close()
+
+
+
+
+def _httpserver_put_in_headerdict(res, lastheader, lastheader_str):
+  # Helper function that tries to put the header into a dictionary of lists,
+  # 'res'.
+  if lastheader is not None:
+    if lastheader not in res:
+      res[lastheader] = []
+    res[lastheader].append(lastheader_str.strip())
+
+
+
+
+def _httpretrieve_parse_responseheaders(headerlines):
+  # Parse rfc822-style headers (this could be abstracted out to an rfc822
+  # library that would be quite useful for internet protocols). Returns
+  # a dictionary mapping headers to arrays of values. E.g.:
+  #
+  # Foo: a
+  # Bar:
+  #   b
+  # Bar: c
+  #
+  # Becomes: {"Foo": ["a"], "Bar": ["b", "c"]}
+
+  # These variables represent the key and value of the last header we found,
+  # unless we are parsing the very first header. E.g., if we've just read:
+  #   Content-Type: text/html
+  # Then, lastheaderkeystr == "Content-Type",
+  # lastheadervaluestr == "text/html"
+
+  lastheaderkeystr = None
+  lastheadervaluestr = ""
+
+  resdict = {}
+  
+  if len(headerlines) == 0:
+    return {}
+
+  try:
+    # Iterate over the request header lines:
+    for i in range(len(headerlines)):
+      # Lines with leading non-CRLF whitespace characters are part of the
+      # previous line (see rfc822 for details).
+      if headerlines[i][0] in (" ", "\t") and lastheaderkeystr is not None:
+        lastheadervaluestr += headerlines[i]
+      else:
+        _httpserver_put_in_headerdict(resdict, lastheaderkeystr, lastheadervaluestr)
+        lastheaderkeystr, lastheadervaluestr = headerlines[i].split(":", 1)
+
+    # Add the last line to the result dictionary.
+    _httpserver_put_in_headerdict(resdict, lastheaderkeystr, lastheadervaluestr)
+
+    return resdict
+
+  except IndexError, idx:
+    raise HttpBrokenServerError("Server returned garbage for HTTP" + \
+        " response. Bad headers.")
+
+
+
+
+def _httpretrieve_build_request(host, port, path, querydata, postdata, \
+    httpheaders, proxy):
+  # Builds an HTTP request from these parameters, returning it as
+  # a string.
+
+  # Sanity checks:
+  if path == "":
+    raise ValueError("Invalid path -- empty string.")
+  if postdata is not None and type(postdata) not in (str, dict):
+    raise TypeError("Postdata should be a dict of form-data or a string")
+  if querydata is not None and type(querydata) not in (str, dict):
+    raise TypeError("Querydata should be a dict of form-data or a string")
+  if httpheaders is not None and type(httpheaders) is not dict:
+    raise TypeError("Expected HTTP headers as a dictionary.")
+
+  # Type-conversions:
+  if type(querydata) is dict:
+    querydata = urllib_quote_parameters(querydata)
+  elif querydata is None:
+    querydata = ""
+
+  if type(postdata) is dict:
+    postdata = urllib_quote_parameters(postdata)
+
+  # Default to GET, unless the caller specifies a message body to send.
+  methodstr = "GET"
+  if postdata is not None:
+    methodstr = "POST"
+
+  # Encode the path and querystring part of the request.
+  resourcestr = querydata
+  if querydata != "":
+    resourcestr = "?" + resourcestr
+
+  # Encode the HTTP request line and headers:
+  if proxy is not None:
+    # proxy exists thus the request header should include the original requested url  
+    requeststr = methodstr + ' http://' + host + ':' + str(port) + path + resourcestr + ' HTTP/1.0\r\n'
+  else:
+    # there is no proxy; send normal http request   
+    requeststr = methodstr + ' ' + path + resourcestr + ' HTTP/1.0\r\n'
+    
+  if httpheaders is not None:
+    # Most servers require a 'Host' header for normal functionality
+    # (especially in the case of multiple domains being hosted on a
+    # single server).
+    if "Host" not in httpheaders:
+      requeststr += "Host: " + host + ':' + str(port) + "\r\n"
+
+    for key, val in httpheaders.items():
+      requeststr += key + ": " + val + '\r\n'
+
+  # Affix post-data related headers and content:
+  if methodstr == "POST":
+    requeststr += 'Content-Length: ' + str(len(postdata)) + '\r\n'
+
+  # The empty line terminates HTTP headers.
+  requeststr += '\r\n'
+
+  # If we're a POST request, affix any requested data to the message body.
+  if methodstr == "POST":
+    requeststr += postdata
+
+  return requeststr
+
+
+
+
+def _httpretrieve_sendall(sockobj, datastr):
+  # Helper function that attempts to dump all of the data in datastr to the
+  # socket sockobj (data is any arbitrary bytes).
+  while len(datastr) > 0:
+    datastr = datastr[sockobj.send(datastr):]
+
+#end include httpretrieve.repy
+#begin include xmlparse.repy
+"""
+<Program Name>
+  xmlparse.repy
+
+<Started>
+  April 2009
+
+<Author>
+  Conrad Meyer <cemeyer@u.washington.edu>
+
+<Purpose>
+  Provide a relatively simplistic but usable xml parsing library for
+  RePy.
+"""
+
+class xmlparse_XMLParseError(Exception):
+  """Exception raised when an error is encountered parsing the XML."""
+  pass
+
+
+
+
+class xmlparse_XMLTreeNode:
+  """
+  <Purpose>
+    Provide a simple tree structure for XML data.
+
+  <Exceptions>
+    None.
+
+  <Example Use>
+    node = xmlparse_parse("<Some><xml><data></data></xml></Some>")
+  """   
+
+
+  def __init__(self, tag_name):
+    self.tag_name = tag_name
+    self.children = None
+    self.content = None
+    self.attributes = {}
+
+
+  def __repr__(self):
+    """Provide a pretty representation of an XML tree."""
+
+    if self.content is not None:
+      return "%s:\"%s\"" % (self.tag_name, self.content)
+    else:
+      return "%s:%s" % (self.tag_name, str(self.children))
+
+
+  def to_string(self):
+    result = "<" + self.tag_name
+    for attribute_name in self.attributes.keys():
+      attribute_value_escaped = \
+          self.attributes[attribute_name].replace("\"", "\\\"")
+      result += " " + attribute_name + "=\"" + attribute_value_escaped + "\""
+    
+    if self.content is None:
+      result += ">"
+      for childnode in self.children:
+        result += childnode.to_string()
+      result += "</" + self.tag_name + ">"
+    else:
+      if len(self.content) == 0:
+        result += "/>"
+      else:
+        result += ">" + self.content + "</" + self.tag_name + ">"
+
+    return result
+
+
+
+
+def xmlparse_parse(data):
+  """
+  <Purpose>
+    Parses an XML string into an xmlparse_XMLTreeNode containing the root
+    item.
+
+  <Arguments>
+    data:
+           The data to parse.
+
+  <Exceptions>
+    xmlparse_XMLParseError if parsing fails.
+
+  <Side Effects>
+    None.
+
+  <Returns>
+    An xmlparse_XMLTreeNode tree.
+  """
+
+  data = data.lstrip()
+  if data.startswith("<?xml"):
+    data = data[data.find("?>")+2:]
+  
+  # Well-formed XML Documents have exactly one root node
+  parsed_elements = _xmlparse_parse(data)
+  if len(parsed_elements) != 1:
+    raise xmlparse_XMLParseError("XML response from server contained more than one root node")
+
+  return parsed_elements[0]
+
+
+
+
+def _xmlparse_read_attributes(string):
+  # Returns a pair containing the dictionary of attributes and remainder
+  # of the string on success; excepts on failure.
+
+  # Q_n corresponds to the state_* constant of the same value. The starting
+  # node is Q_1.
+  #
+  #  [ Done ]
+  #     ^
+  #     |
+  #     | (>, /)
+  #     |
+  #     \--------\ 
+  #              |
+  #        ,-.   | v-----------------------------------\
+  # space (   [ Q_1 ]                                  |
+  #        `->   | ^-----------------------\ (')       |
+  #              |                         |           |
+  #              |                (')      |   <-.     | (")
+  #              | non-space   /------->[ Q_4 ]   )    |
+  #              |             |               `-'     |
+  #  (space)     v     (=)     |             (other)   |
+  #     /-----[ Q_2 ]------>[ Q_3 ]-------->[ Q_5 ]----/
+  #     |      ^   )           |      (")    ^   )
+  #     |       `-'            |              `-'
+  #     |     (other)   (other)|             (other)
+  #     |                      |
+  #     v                      |
+  #[Exception]<----------------/
+
+  # Basically the state machine is used to read a list of attribute-pairs,
+  # terminated by a '/' or '>'. Attribute pairs either look like:
+  #   name='value'
+  # or:
+  #   name="value"
+  # Single-quoted attributes can contain double-quotes, and vice-versa, but
+  # single-quotes in single-quoted attributes must be escaped.
+  # 
+  # To do this we start in Q_1, which consumes input until we arrive at
+  # something that looks like an attribute name. In Q_2 we consume characters
+  # for the attribute name until it looks like the attribute name is finished.
+  # In Q_3 we read a single character to determine what type of quoting is
+  # used for the attribute value. In Q_4 or Q_5, we read the attribute's value
+  # until the string is closed, then go back to Q_1 (saving the attribute name
+  # and value into the dictionary). We decide we are done when we encounter a
+  # '>' or '/' in Q_1.
+
+  # Constant states:
+  state_EXPECTING_ATTRNAME = 1
+  state_READING_ATTRNAME = 2
+  state_EXPECTING_ATTRVALUE = 3
+  state_READING_ATTRVALUE_SINGLEQUOTE = 4
+  state_READING_ATTRVALUE_DOUBLEQUOTE = 5
+
+  current_position = 0
+  current_state = 1
+  current_attrname = ""
+  current_attrvalue = ""
+  attributes = {}
+
+  while True:
+    if current_position >= len(string):
+      raise xmlparse_XMLParseError(
+          "Failed to parse element attribute list -- input ran out " + \
+              "before we found a closing '>' or '/'")
+
+    current_character = string[current_position]
+
+    if current_state == state_EXPECTING_ATTRNAME:
+      if current_character.isspace():
+        pass    # We stay in this state
+      elif current_character == '>' or current_character == '/':
+        # We're finished reading attributes
+        return (attributes, string[current_position:])
+      else:
+        current_attrname += current_character
+        current_state = state_READING_ATTRNAME
+
+    elif current_state == state_READING_ATTRNAME:
+      if current_character.isspace():
+        raise xmlparse_XMLParseError(
+            "Failed to parse element attribute list -- attribute " + \
+                "ended unexpectedly with a space")
+      elif current_character == "=":
+        current_state = state_EXPECTING_ATTRVALUE
+      else:
+        current_attrname += current_character
+
+    elif current_state == state_EXPECTING_ATTRVALUE:
+      if current_character == '\'':
+        current_state = state_READING_ATTRVALUE_SINGLEQUOTE
+      elif current_character == '"':
+        current_state = state_READING_ATTRVALUE_DOUBLEQUOTE
+      else:
+        raise xmlparse_XMLParseError(
+            "Failed to parse element attribute list -- attribute " + \
+                "values must be quoted")
+
+    elif current_state == state_READING_ATTRVALUE_SINGLEQUOTE:
+      if current_character == '\'':
+        attributes[current_attrname] = current_attrvalue
+        current_state = state_EXPECTING_ATTRNAME
+        current_attrname = ""
+        current_attrvalue = ""
+      else:
+        current_attrvalue += current_character
+
+    elif current_state == state_READING_ATTRVALUE_DOUBLEQUOTE:
+      if current_character == '"':
+        attributes[current_attrname] = current_attrvalue
+        current_state = state_EXPECTING_ATTRNAME
+        current_attrname = ""
+        current_attrvalue = ""
+      else:
+        current_attrvalue += current_character
+
+    current_position += 1
+
+
+
+
+def _xmlparse_node_from_string(string):
+  # string:
+  #   <tag attr1="value" attr2='value'>content</tag>
+  # Content may be a string or a list of children nodes depending on if the
+  # first non-space character is a '<' or not.
+
+  string = string.lstrip()
+  if not string.startswith("<"):
+    raise xmlparse_XMLParseError("Error parsing XML -- doesn't " + \
+        "start with '<'")
+
+  string = string[1:]
+
+  read_pos = 0
+  while True:
+    if read_pos >= len(string):
+      raise xmlparse_XMLParseError("Error parsing XML -- parser " + \
+          "ran out of input trying to read a tag")
+
+    # The tag name is ended with a space or a closing angle-brace or
+    # a "/".
+    curchar = string[read_pos]
+    if curchar.isspace() or curchar == ">" or curchar == "/":
+      break
+
+    read_pos += 1
+
+  tag = string[0:read_pos]
+  string = string[read_pos:]
+
+  # Get the attribute dictionary and remaining string (which will be
+  # "> ... [ inner stuff ] </[tag_name]>" or "/>" for well-formed XML).
+  attributes, string = _xmlparse_read_attributes(string)
+
+  # "Empty" elements look like: "<[tag_name] [... maybe attributes] />" and
+  # not "Empty" elements look like:
+  # "<[tag_name] [... maybe attributes]> [inner content] </[tag_name]>".
+  empty_element = False
+  if string.startswith(">"):
+    string = string[1:]
+  elif string.startswith("/>"):
+    string = string[2:]
+    empty_element = True
+
+  xmlnode = xmlparse_XMLTreeNode(tag)
+  xmlnode.attributes = attributes
+
+  if empty_element:
+    xmlnode.content = ""
+
+  else:
+    # Locate the end-boundary of the inner content of this element.
+    ending_tag_position = string.rfind("</")
+    if ending_tag_position < 0:
+      raise xmlparse_XMLParseError("XML parse error -- could not " + \
+          "locate closing tag")
+
+    # If this elements starting and closing tag names do not match, this XML
+    # is not well-formed.
+    if not string.startswith("</" + tag, ending_tag_position):
+      raise xmlparse_XMLParseError("XML parse error -- different " + \
+          "opening / closing tags at the same nesting level")
+
+    # If the inner content starts with another element, this element has
+    # children.  Otherwise, it has content, which is just a string containing
+    # the inner content.
+    tag_body = string[:ending_tag_position]
+    if tag_body.lstrip().startswith("<"):
+      xmlnode.children = _xmlparse_parse(tag_body.lstrip())
+    else:
+      xmlnode.content = tag_body
+
+  return xmlnode
+
+
+
+
+def _xmlparse_find_next_tag(xmldata):
+  # Finds the position of the start of the next same-level tag in this XML
+  # document.
+
+  read_position = 0
+  nested_depth = 0
+
+  original_length = len(xmldata)
+  xmldata = xmldata.lstrip()
+  length_difference = original_length - len(xmldata)
+
+  # Seek to another XML tag at the same depth.
+  while True:
+    if xmldata.startswith("</", read_position) or \
+        xmldata.startswith("/>", read_position):
+      nested_depth -= 1
+    elif xmldata.startswith("<", read_position):
+      nested_depth += 1
+
+    read_position += 1
+
+    if read_position >= len(xmldata):
+      return read_position + length_difference
+
+    if nested_depth == 0:
+      nexttagposition = xmldata.find("<", read_position)
+
+      if nexttagposition < 0:
+        return original_length
+      else:
+        return nexttagposition + length_difference
+
+
+
+
+def _xmlparse_parse(xmldata):
+  # Takes a raw XML stream and returns a list of XMLTreeNodes.
+
+  nodelist = []
+
+  while True:
+    # Whitespace between tags isn't important to the content of
+    # an XML document.
+    xmldata = xmldata.strip()
+
+    # Strip out XML comments.
+    if xmldata.startswith("<!--"):
+      commentendloc = xmldata.find("-->", 4)
+      if commentendloc < 0:
+        raise xmlparse_XMLParseError("XML parse error -- comment " + \
+            "missing close tag ('-->')")
+      xmldata = xmldata[commentendloc+3:]
+      continue
+
+    # Find the end of the current tag.
+    nexttagend = _xmlparse_find_next_tag(xmldata)
+
+    thisnode_str = xmldata[0:nexttagend]
+    xmldata = xmldata[nexttagend:]
+
+    # Parse a tag out of the string we just found.
+    thisnode = _xmlparse_node_from_string(thisnode_str)
+    nodelist.append(thisnode)
+
+    if not xmldata.strip().startswith("<"):
+      break
+
+  return nodelist
+
+#end include xmlparse.repy
+
+
+
+
+DORadvertise_FORM_LOCATION = "http://geni.doregistry.org/SeattleGENI/HashTable"
+
+
+
+
+class DORadvertise_XMLError(Exception):
+  """
+  Exception raised when the XML recieved from the Digital Object Registry
+  server does not match the structure we expect.
+  """
+  pass
+
+
+
+
+class DORadvertise_BadRequest(Exception):
+  """
+  Exception raised when the Digital Object Registry interface indigates we
+  have made an invalid request.
+  """
+
+
+  def __init__(self, errno, errstring):
+    self.errno = errno
+    self.errstring = errstring
+    Exception.__init__(self, "Bad DOR request (%s): '%s'" % (str(errno), errstring))
+
+
+
+
+def DORadvertise_announce(key, value, ttlval, timeout=None):
+  """
+  <Purpose>
+    Announce a (key, value) pair to the Digital Object Registry.
+
+  <Arguments>
+    key:
+            The new key the value should be stored under.
+
+    value:
+            The value to associate with the given key.
+
+    ttlval:
+            The length of time (in seconds) to persist this key <-> value
+            association in DHT.
+
+    timeout:
+            The number of seconds to spend on this operation before failing
+            early.
+
+  <Exceptions>
+    xmlparse_XMLParseError if the xml returned isn't parseable by xmlparse.
+    DORadvertise_XMLError if the xml response structure does not correspond
+      to what we expect.
+    DORadvertise_BadRequest if the response indicates an error.
+    Any exception httpretrieve_get_string() throws (including timeout errors).
+
+  <Side Effects>
+    The key <-> value association gets stored in openDHT for a while.
+
+  <Returns>
+    None.
+  """
+
+  post_params = {'command': 'announce', 'key': key, 'value': value,
+      'lifetime': str(int(ttlval))}
+
+  _DORadvertise_command(post_params, timeout=timeout)
+
+  return None
+
+
+
+
+
+def DORadvertise_lookup(key, maxvals=100, timeout=None):
+  """
+  <Purpose>
+    Retrieve a stored value from the Digital Object Registry.
+
+  <Arguments>
+    key:
+            The key the value is stored under.
+
+    maxvals:
+            The maximum number of values stored under this key to
+            return to the caller.
+
+    timeout:
+            The number of seconds to spend on this operation before failing
+            early.   If not specified, the default is set to the default
+            timeout value for the http library (30 seconds).
+
+  <Exceptions>
+    xmlparse_XMLParseError if the xml returned isn't parseable by xmlparse.
+    DORadvertise_XMLError if the xml response structure does not correspond
+      to what we expect.
+    DORadvertise_BadRequest if the response indicates an error.
+    Any exception httpretrieve_get_string() throws (including timeout errors).
+
+  <Side Effects>
+    None.
+
+  <Returns>
+    The value stored in the Digital Object Registry at key.
+  """
+
+  post_params = {'command': 'lookup', 'key': key, 'maxvals': str(maxvals)}
+
+  return _DORadvertise_command(post_params, timeout=timeout)
+
+
+
+def _DORadvertise_command(parameters, timeout=None):
+  # Internal helper function; calls the remote command, and returns
+  # the results we can glean from it.
+
+  # If there is a timeout, use it!
+  if timeout != None:
+    post_result = httpretrieve_get_string(DORadvertise_FORM_LOCATION, \
+        postdata=parameters, timeout=timeout, \
+        httpheaders={"Content-Type": "application/x-www-form-urlencoded"})
+  else:
+    post_result = httpretrieve_get_string(DORadvertise_FORM_LOCATION, \
+        postdata=parameters, \
+        httpheaders={"Content-Type": "application/x-www-form-urlencoded"})
+
+
+  # Parse the result to check for success. Throw several exceptions to
+  # ensure the XML we're reading makes sense.
+  xmltree = xmlparse_parse(post_result)
+
+  if xmltree.tag_name != "HashTableService":
+    raise DORadvertise_XMLError(
+        "Root node error. Expected: 'HashTableService', " +
+        "got: '%s'" % xmltree.tag_name)
+
+  if xmltree.children is None:
+    raise DORadvertise_XMLError("Root node contains no children nodes.")
+
+  # We expect to get an error code, an error string, and possibly some
+  # values from the server.
+  error_msg = None
+  error = None
+  values = None
+
+  numxmlchildren = len(xmltree.children)
+  if numxmlchildren not in [2, 3]:
+    raise DORadvertise_XMLError("Root XML node contains inappropriate " + \
+        "number of child nodes.")
+
+  for xmlchild in xmltree.children:
+    # Read the numeric error code.
+    if xmlchild.tag_name == "status" and xmlchild.content is not None:
+      if error is not None:
+        raise DORadvertise_XMLError("XML contains multiple status tags")
+      error = int(xmlchild.content.strip())
+
+    # String error message (description:status as strerror:errno).
+    elif xmlchild.tag_name == "description":
+      if error_msg is not None:
+        raise DORadvertise_XMLError("XML contains multiple description tags")
+      error_msg = xmlchild.content
+
+    # We found a <values> tag. Let's try and get some values.
+    elif xmlchild.tag_name == "values" and xmlchild.children is not None:
+      if values is not None:
+        raise DORadvertise_XMLError("XML contains multiple values tags")
+
+      values = []
+      for valuenode in xmlchild.children:
+        if valuenode.tag_name != "value":
+          raise DORadvertise_XMLError(
+              "Child tag of <values>; expected: '<value>', got: '<%s>'" % \
+                  valuenode.tag_name)
+
+        content = valuenode.content
+        if content is None:
+          content = ""
+
+        values.append(content)
+
+    # Check for tags we do not expect.
+    elif xmlchild.tag_name not in ("status", "description", "values"):
+      raise DORadvertise_XMLError("Unexpected tag '" + \
+          str(xmlchild.tag_name) + "' while parsing response.")
+
+  if error is not 0:
+    raise DORadvertise_BadRequest(error, error_msg)
+
+  # This happens when the server returns <values></values>
+  if values is None:
+    return []
+
+  return values
+
+#end include DORadvertise.repy
+#begin include parallelize.repy
+""" 
+Author: Justin Cappos
+
+Module: A parallelization module.   It performs actions in parallel to make it
+        easy for a user to call a function with a list of tasks.
+
+Start date: November 11th, 2008
+
+This module is adapted from code in seash which had similar functionality.
+
+NOTE (for the programmer using this module).   It's really important to 
+write concurrency safe code for the functions they provide us.  It will not 
+work to write:
+
+def foo(...):
+  mycontext['count'] = mycontext['count'] + 1
+
+YOU MUST PUT A LOCK AROUND SUCH ACCESSES.
+
+"""
+
+
+# I use this to get unique identifiers. 
+#begin include uniqueid.repy
+""" 
+Author: Justin Cappos
+
+Module: A simple library that provides a unique ID for each call
+
+Start date: November 11th, 2008
+
+This is a really, really simple module, only broken out to avoid duplicating 
+functionality.
+
+NOTE: This will give unique ids PER FILE.   If you have multiple python 
+modules that include this, they will have the potential to generate the
+same ID.
+
+"""
+
+# This is a list to prevent using part of the user's mycontext dict
+uniqueid_idlist = [0]
+uniqueid_idlock = getlock()
+
+def uniqueid_getid():
+  """
+   <Purpose>
+      Return a unique ID in a threadsafe way
+
+   <Arguments>
+      None
+
+   <Exceptions>
+      None
+
+   <Side Effects>
+      None.
+
+   <Returns>
+      The ID (an integer)
+  """
+
+  uniqueid_idlock.acquire()
+
+  # I'm using a list because I need a global, but don't want to use the 
+  # programmer's dict
+  myid = uniqueid_idlist[0]
+  uniqueid_idlist[0] = uniqueid_idlist[0] + 1
+
+  uniqueid_idlock.release()
+
+  return myid
+
+
+
+#end include uniqueid.repy
+
+
+
+class ParallelizeError(Exception):
+  """An error occurred when operating on a parallelized task"""
+
+
+# This has information about all of the different parallel functions.
+# The keys are unique integers and the entries look like this:
+# {'abort':False, 'callfunc':callfunc, 'callargs':callargs,
+# 'targetlist':targetlist, 'availabletargetpositions':positionlist,
+# 'runninglist':runninglist, 'result':result}
+#
+# abort is used to determine if future events should be aborted.
+# callfunc is the function to call
+# callargs are extra arguments to pass to the function
+# targetlist is the list of items to call the function with
+# runninglist is used to track which events are executing
+# result is a dictionary that contains information about completed function.
+#    The format of result is:
+#      {'exception':list of tuples with (target, exception string), 
+#       'aborted':list of targets,
+#       'returned':list of tuples with (target, return value)}
+# 
+parallelize_info_dict = {}
+
+
+
+def parallelize_closefunction(parallelizehandle):
+  """
+   <Purpose>
+      Clean up the state created after calling parallelize_initfunction.
+
+   <Arguments>
+      parallelizehandle:
+         The handle returned by parallelize_initfunction
+          
+
+   <Exceptions>
+      None
+
+   <Side Effects>
+      Will try to abort future functions if possible
+
+   <Returns>
+      True if the parallelizehandle was recognized or False if the handle is
+      invalid or already closed.
+  """
+
+  # There is no sense trying to check then delete, since there may be a race 
+  # with multiple calls to this function.
+  try:
+    del parallelize_info_dict[parallelizehandle]
+  except KeyError:
+    return False
+  else:
+    return True
+
+    
+
+
+
+def parallelize_abortfunction(parallelizehandle):
+  """
+   <Purpose>
+      Cause pending events for a function to abort.   Events will finish 
+      processing their current event.
+
+   <Arguments>
+      parallelizehandle:
+         The handle returned by parallelize_initfunction
+          
+
+   <Exceptions>
+      ParallelizeError is raised if the handle is unrecognized
+
+   <Side Effects>
+      None
+
+   <Returns>
+      True if the function was not previously aborting and is now, or False if 
+      the function was already set to abort before the call.
+  """
+
+  
+  try:
+    if parallelize_info_dict[parallelizehandle]['abort'] == False:
+      parallelize_info_dict[parallelizehandle]['abort'] = True
+      return True
+    else:
+      return False
+  except KeyError:
+    raise ParallelizeError("Cannot abort the parallel execution of a non-existent handle:"+str(parallelizehandle))
+
+
+
+def parallelize_isfunctionfinished(parallelizehandle):
+  """
+   <Purpose>
+      Indicate if a function is finished
+
+   <Arguments>
+      parallelizehandle:
+         The handle returned by parallelize_initfunction
+          
+
+   <Exceptions>
+      ParallelizeError is raised if the handle is unrecognized
+
+   <Side Effects>
+      None
+
+   <Returns>
+      True if the function has finished, False if it is still has events running
+  """
+
+  
+  try:
+    if parallelize_info_dict[parallelizehandle]['runninglist']:
+      return False
+    else:
+      return True
+  except KeyError:
+    raise ParallelizeError("Cannot get status for the parallel execution of a non-existent handle:"+str(parallelizehandle))
+
+
+
+
+
+def parallelize_getresults(parallelizehandle):
+  """
+   <Purpose>
+      Get information about a parallelized function
+
+   <Arguments>
+      parallelizehandle:
+         The handle returned by parallelize_initfunction
+          
+   <Exceptions>
+      ParallelizeError is raised if the handle is unrecognized
+
+   <Side Effects>
+      None
+
+   <Returns>
+      A dictionary with the results.   The format is
+        {'exception':list of tuples with (target, exception string), 
+         'aborted':list of targets, 'returned':list of tuples with (target, 
+         return value)}
+  """
+
+  
+  try:
+    # I copy so that the user doesn't have to deal with the fact I may still
+    # be modifying it
+    return parallelize_info_dict[parallelizehandle]['result'].copy()
+  except KeyError:
+    raise ParallelizeError("Cannot get results for the parallel execution of a non-existent handle:"+str(parallelizehandle))
+
+
+
+      
+
+
+
+      
+
+
+def parallelize_initfunction(targetlist, callerfunc,concurrentevents=5, *extrafuncargs):
+  """
+   <Purpose>
+      Call a function with each argument in a list in parallel
+
+   <Arguments>
+      targetlist:
+          The list of arguments the function should be called with.   Each
+          argument is passed once to the function.   Items may appear in the
+          list multiple times
+
+      callerfunc:
+          The function to call
+ 
+      concurrentevents:
+          The number of events to issue concurrently (default 5).   No more 
+          than len(targetlist) events will be concurrently started.
+
+      extrafuncargs:
+          Extra arguments the function should be called with (every function
+          is passed the same extra args).
+
+   <Exceptions>
+      ParallelizeError is raised if there isn't at least one free event.   
+      However, if there aren't at least concurrentevents number of free events,
+      this is not an error (instead this is reflected in parallelize_getstatus)
+      in the status information.
+
+   <Side Effects>
+      Starts events, etc.
+
+   <Returns>
+      A handle used for status information, etc.
+  """
+
+  parallelizehandle = uniqueid_getid()
+
+  # set up the dict locally one line at a time to avoid a ginormous line
+  handleinfo = {}
+  handleinfo['abort'] = False
+  handleinfo['callfunc'] = callerfunc
+  handleinfo['callargs'] = extrafuncargs
+  # make a copy of target list because 
+  handleinfo['targetlist'] = targetlist[:]
+  handleinfo['availabletargetpositions'] = range(len(handleinfo['targetlist']))
+  handleinfo['result'] = {'exception':[],'returned':[],'aborted':[]}
+  handleinfo['runninglist'] = []
+
+  
+  parallelize_info_dict[parallelizehandle] = handleinfo
+
+  # don't start more threads than there are targets (duh!)
+  threads_to_start = min(concurrentevents, len(handleinfo['targetlist']))
+
+  for workercount in range(threads_to_start):
+    # we need to append the workercount here because we can't return until 
+    # this is scheduled without having race conditions
+    parallelize_info_dict[parallelizehandle]['runninglist'].append(workercount)
+    try:
+      settimer(0.0, parallelize_execute_function, (parallelizehandle,workercount))
+    except:
+      # If I'm out of resources, stop
+      # remove this worker (they didn't start)
+      parallelize_info_dict[parallelizehandle]['runninglist'].remove(workercount)
+      if not parallelize_info_dict[parallelizehandle]['runninglist']:
+        parallelize_closefunction(parallelizehandle)
+        raise Exception, "No events available!"
+      break
+  
+  return parallelizehandle
+    
+
+
+def parallelize_execute_function(handle, myid):
+  # This is internal only.   It's used to execute the user function...
+
+  # No matter what, an exception in me should not propagate up!   Otherwise,
+  # we might result in the program's termination!
+  try:
+
+    while True:
+      # separate this from below functionality to minimize scope of try block
+      thetargetlist = parallelize_info_dict[handle]['targetlist']
+      try:
+        mytarget = thetargetlist.pop()
+      except IndexError:
+        # all items are gone, let's return
+        return
+
+      # if they want us to abort, put this in the aborted list
+      if parallelize_info_dict[handle]['abort']:
+        parallelize_info_dict[handle]['result']['aborted'].append(mytarget)
+
+      else:
+        # otherwise process this normally
+
+        # limit the scope of the below try block...
+        callfunc = parallelize_info_dict[handle]['callfunc']
+        callargs = parallelize_info_dict[handle]['callargs']
+
+        try:
+          retvalue = callfunc(mytarget,*callargs)
+        except Exception, e:
+          # always log on error.   We need to report what happened
+          parallelize_info_dict[handle]['result']['exception'].append((mytarget,str(e)))
+        else:
+          # success, add it to the dict...
+          parallelize_info_dict[handle]['result']['returned'].append((mytarget,retvalue))
+
+
+  except KeyError:
+    # A KeyError is normal if they've closed the handle
+    return
+
+  except Exception, e:
+    print 'Internal Error: Exception in parallelize_execute_function',e
+
+  finally:
+    # remove my entry from the list of running worker threads...
+    try:
+      parallelize_info_dict[handle]['runninglist'].remove(myid)
+    except (ValueError, KeyError):
+      pass
+    
+
+    
+
+
+#end include parallelize.repy
+#begin include udpcentralizedadvertise.repy
+""" 
+Author: Justin Cappos
+
+Start Date: Oct 30, 2011
+
+Description:
+Advertisements to a central server (similar to openDHT)
+
+This uses UDP and is conceptually quite similar to the centralized advertise
+service
+"""
+
+#begin include serialize.repy
+#already included serialize.repy
+#end include serialize.repy
+#begin include uniqueid.repy
+#already included uniqueid.repy
+#end include uniqueid.repy
+
+
+# Hmm, perhaps I should make an initialization call instead of hardcoding this?
+# I suppose it doesn't matter since one can always override these values
+udpservername = "udpadvertiseserver.poly.edu"
+udpserverport = 10102
+
+# how long to wait for timeouts...
+udpcentralizedservertimeouts = [1,2,4,8]
+
+# If a query times out or if we decide to abandon it, put the ID here. That way, 
+# the communicate function can reject it if the server responds belatedly.
+failed_querylist = []
+
+# Need this for receiving over UDP. The Repy v1 API forces us to use 
+# a callback, which requires this roundabout solution.
+mycontext['advertise_response'] = []
+
+mycontext['udprequestport'] = 0
+
+class UDPCentralAdvertiseError(Exception):
+  """Error when advertising a value to the central advertise service."""
+
+class UDPNoResponseError(Exception):
+  """Error when advertising a value to the central advertise service."""
+
+
+
+
+def _getusableport():
+  """
+  <Purpose>
+    Discover which port the server can use for announcements.
+
+  <Arguments>
+    None
+
+  <Exceptions>
+    None
+
+  <Side Effects>
+    None
+
+  <Returns>
+    An integer port
+  """
+  port_found = False
+  port_min = 63000
+  port_max = 63150
+  port_iter = port_min
+  local_addr = getmyip()
+
+  while not port_found:
+    if port_iter > port_max:
+      raise Exception("Network restriction error! Unable to find a free port!")
+    try:
+      udp_test_socket = recvmess(local_addr, port_iter, _dummy_function)
+      stopcomm(udp_test_socket)
+      port_found = True
+    except Exception, e:
+      port_iter += 1
+
+  return port_iter
+
+
+
+
+# This helper function handles communications with the server
+def _udpcentralizedadvertise_communicate(datastringtosend, timeout, queryid):
+  if mycontext['udprequestport'] == 0:
+    mycontext['udprequestport'] = _getusableport()
+
+  udprequestport = mycontext['udprequestport']
+
+  if udprequestport is None:
+    udprequestport = _getusableport()
+    mycontext['udprequestport'] = udprequestport
+
+  starttime = getruntime()
+
+  # Let's get ready to receive a response...
+  # NOTE: This is a roundabout solution to deal with the fact that the 
+  #       V1 API requires use of callbacks when using UDP.
+  udpresponsesocket = recvmess(getmyip(), udprequestport, _listenformessage)
+
+  # but always close the response socket...
+  try:
+    # send the request over UDP...
+    sendmess(udpservername, udpserverport, datastringtosend, getmyip(), udprequestport)
+
+    while getruntime() < starttime + timeout:
+
+      for entry in mycontext['advertise_response']:
+        if entry[len(entry) - 1] == queryid:
+          return_value = mycontext['advertise_response'].pop(mycontext['advertise_response'].index(entry))
+          return return_value
+
+      # Since there's nothing here for us, why not do some spring cleaning?
+      for entry in mycontext['advertise_response']:
+        if queryid - entry[len(entry) - 1] > 100:
+          mycontext['advertise_response'].pop(mycontext['advertise_response'].index(entry))
+
+      # Already done? Let's play nice with the other threads.
+      sleep(0.01) # Strongly recommend NOT to set this any higher.
+      
+    raise UDPNoResponseError("Did not receive a response from UDP advertise server")
+
+  finally:
+    # always close the response socket...
+    stopcomm(udpresponsesocket)
+
+
+
+
+# This is our roundabout solution for a UDP callback.
+# Could crash. Probably should if something bad happens.
+def _listenformessage(remoteIP, remoteport, message, commhandle):
+  mycontext['advertise_response'].append(serialize_deserializedata(message))
+
+  stopcomm(commhandle)
+  return
+
+
+
+
+# A dummy function for getusableport.
+def _dummy_function(remoteIP, remoteport, message, commhandle):
+  return
+
+
+
+
+def udpcentralizedadvertise_announce(key, value, ttlval):
+  """
+   <Purpose>
+     Announce a key / value pair into the CHT.
+
+   <Arguments>
+     key: the key to put the value under. This will be converted to a string.
+
+     value: the value to store at the key. This is also converted to a string.
+
+     ttlval: the amount of time until the value expires.   Must be an integer
+
+   <Exceptions>
+     TypeError if ttlval is of the wrong type.
+
+     ValueError if ttlval is not positive 
+
+     UDPCentralAdvertiseError is raised the server response is corrupted
+
+     Various network and timeout exceptions are raised by udp messages
+
+   <Side Effects>
+     The CHT will store the key / value pair.
+
+   <Returns>
+     None
+  """
+  # do basic argument checking / munging
+  key = str(key)
+  value = str(value)
+
+  if not type(ttlval) is int and not type(ttlval) is long:
+    raise TypeError("Invalid type '"+str(type(ttlval))+"' for ttlval.")
+
+  if ttlval < 1:
+    raise ValueError("The argument ttlval must be positive, not '"+str(ttlval)+"'")
+
+  # myrequestport = getusableport()
+
+  unique_request_id = uniqueid_getid()
+
+  # We'll loop through and send a request, increasing the timeout upon failure
+  for thistimeout in udpcentralizedservertimeouts:
+
+    # build the tuple to send, then convert to a string because only strings
+    # (bytes) can be transmitted over the network...
+    datatosend = ('PUT',key,value,ttlval, unique_request_id)
+    datastringtosend = serialize_serializedata(datatosend)
+  
+    rawresponse = None
+
+    try:
+    # send the request over UDP...
+      rawresponse = _udpcentralizedadvertise_communicate(datastringtosend, thistimeout, unique_request_id)
+
+    except UDPNoResponseError:
+      # let's increase the timeout...
+      continue
+    
+    if not rawresponse == None:
+      # We should check that the response is 'OK'
+      try:
+        response = rawresponse
+      except ValueError, e:
+        raise UDPCentralAdvertiseError("Received unknown response from server '"+rawresponse+"'")
+
+      if type(response) is not tuple or len(response) != 2:
+        raise UDPCentralAdvertiseError("UDP Centralized announce received invalid response type '"+str(response)+"'")
+      if type(response[0]) is not str:
+        raise UDPCentralAdvertiseError("UDP Centralized announce received response with invalid first parameter '"+str(response)+"'")
+  
+      if response[1] != unique_request_id:
+        raise UDPCentralAdvertiseError("UDP Centralized announce received different request id '"+str(response)+"'")
+
+      if response[0] != 'OK':
+        raise UDPCentralAdvertiseError("UDP Centralized announce failed with '"+response[0]+"'")
+
+      else:
+        # else all is well!   Let's return success
+        return
+      
+  failed_querylist.append(unique_request_id)
+
+  # fell through all of the timeout values...
+  raise UDPCentralAdvertiseError("UDP Centralized announce timed out!")
+
+
+
+def udpcentralizedadvertise_lookup(key, maxvals=100):
+  """
+   <Purpose>
+     Returns a list of valid values stored under a key
+
+   <Arguments>
+     key: the key to put the value under. This will be converted to a string.
+
+     maxvals: the maximum number of values to return.   Must be an integer
+
+   <Exceptions>
+     TypeError if maxvals is of the wrong type.
+
+     ValueError if maxvals is not a positive number
+
+     UDPCentralAdvertiseError is raised the server response is corrupted
+
+     Various network and timeout exceptions are raised by timeout_openconn
+     and session_sendmessage / session_recvmessage
+
+   <Side Effects>
+     None
+
+   <Returns>
+     The list of values
+  """
+
+  # do basic argument checking / munging
+  key = str(key)
+
+  if not type(maxvals) is int and not type(maxvals) is long:
+    raise TypeError("Invalid type '"+str(type(maxvals))+"' for ttlval.")
+
+  if maxvals < 1:
+    raise ValueError("The argument ttlval must be positive, not '"+str(ttlval)+"'")
+
+
+  # We'll loop through and send a request, increasing the timeout upon failure
+  for thistimeout in udpcentralizedservertimeouts:
+
+    # get a unique request id
+    unique_request_id = uniqueid_getid()
+  
+    # build the tuple to send, then convert to a string because only strings
+    # (bytes) can be transmitted over the network...
+    messagetosend = ('GET',key,maxvals,unique_request_id)
+    messagestringtosend = serialize_serializedata(messagetosend)
+
+  
+    try:
+    # send the request over UDP...
+      responsetuple = _udpcentralizedadvertise_communicate(messagestringtosend, thistimeout, unique_request_id)
+
+    except UDPNoResponseError:
+      # let's increase the timeout...
+      continue
+  
+
+    # try:
+    #   responsetuple = serialize_deserializedata(rawreceiveddata[2])
+    # except ValueError, e:
+    #   raise UDPCentralAdvertiseError("Received unknown response from server '"+rawresponse+"'")
+
+    # For a set of values, 'a','b','c',  I should see the response: 
+    # ('OK', ['a','b','c'])    Anything else is WRONG!!!
+  
+    if not type(responsetuple) is tuple:
+      raise UDPCentralAdvertiseError("Received data is not a tuple '"+str(responsetuple)+"'")
+
+
+    if len(responsetuple) != 3:
+      raise UDPCentralAdvertiseError("Response tuple did not have exactly three elements '"+str(responsetuple)+"'")
+
+    if responsetuple[2] != unique_request_id:
+      raise UDPCentralAdvertiseError("UDP Centralized announce received different request id '"+str(responsetuple)+"'")
+
+    if responsetuple[0] != 'OK':
+      raise UDPCentralAdvertiseError("Central server returns error '"+str(responsetuple[:-1])+"'")
+
+
+  
+    if not type(responsetuple[1]) is list:
+      raise UDPCentralAdvertiseError("Received item is not a list '"+responsetuple+"'")
+
+    for responseitem in responsetuple[1]:
+      if not type(responseitem) is str:
+        raise UDPCentralAdvertiseError("Received item '"+str(responseitem)+"' is not a string in '"+responsetuple+"'")
+
+    # okay, we *finally* seem to have what we expect...
+
+    return responsetuple[1]
+      
+
+#end include udpcentralizedadvertise.repy
+
+
+# All the names of services we can support.
+# As of January 2012, openDHT is no longer a default service.
+_advertise_all_services = ("central", "central_v2", "DOR")
+
+
+nodemanager_announce_context = {}
+for service in _advertise_all_services:
+  nodemanager_announce_context["skip" + service] = 0
+  nodemanager_announce_context["previous" + service + "skip"] = 1
+nodemanager_announce_context_lock = getlock()
+
+
+# an exception to indicate an error occured while advertising
+class AdvertiseError(Exception):
+  pass
+
+
+
+
+def _try_advertise_announce(args):
+  """
+  <Purpose>
+    Helper function to be used in parallel with other advertise requests. 
+    This is the function we pass to parallelize to perform simultaneous 
+    queries.
+
+  <Arguments>
+    args (tuple)
+      A tuple containing the following:
+        which_service (string)
+          The service we should use to advertise, such as "central" or "DOR".
+        key (string)
+          The advertisement key. For most nodes, this will be a public key.
+        value (string)
+          The advertisement value to be assigned to key.
+        ttlval (int)
+          Time To Live for this advertisement, in seconds.
+        exceptions (List reference, should literally be [''])
+          An empty list reference which will be have exception data in its zero 
+          index if something goes wrong. Due to this method's parallelized nature, 
+          we cannot simply return this data; it is not invoked by this module.
+        finishedref (List with boolean in zero index)
+          This function sets finishedref[0] = true when it has completed 
+          successfully. This is used as a flag so that we know when to return 
+          advertise data to the client later.
+
+  <Exceptions>
+    AdvertiseError
+      If an invalid service type is specified, this exception will be raised.
+    ValueError
+      Too many, or too few values passed in the args tuple.
+
+  <Side Effects>
+    Contingent on the side effects of the modules invoked for different 
+    services, this consumes an outsocket and insocket on use. Therefore, 
+    invoking too many instances of these in parallel can lead to crashing 
+    if the application exceeds its allotted socket count.
+
+    The number of sockets permitted to an application is determined by 
+    its associated restrictions file.
+
+  <Returns>
+    None
+  """
+  # ValueError if there are too many or too few values.
+  which_service, key, value, ttlval, exceptions, finishedref = args
+
+  if which_service not in _advertise_all_services:
+    raise AdvertiseError("Incorrect service type used in internal function _try_advertise_announce.")
+
+  try:
+    if which_service == "central":
+      centralizedadvertise_announce(key, value, ttlval)
+    elif which_service == "central_v2":
+      v2centralizedadvertise_announce(key, value, ttlval)
+    elif which_service == "DOR":
+      DORadvertise_announce(key, value, ttlval)
+    elif which_service == "UDP":
+      udpcentralizedadvertise_announce(key, value, ttlval)
+    else:
+      # This should be redundant with the previous explicit AdvertiseError.
+      # One cannot (usually) be too careful.
+      raise AdvertiseError("Did not understand service type.")
+
+    finishedref[0] = True     # Indicate that this instance has finished.
+    
+    nodemanager_announce_context_lock.acquire()
+    try:
+      nodemanager_announce_context["previous" + which_service + "skip"] = 1
+    finally:
+      nodemanager_announce_context_lock.release()
+
+  except Exception, e:
+    nodemanager_announce_context_lock.acquire()
+    try:
+      exceptions[0] += 'announce error (type: ' + which_service + '): ' + str(e)
+      nodemanager_announce_context["skip" + which_service] = \
+          nodemanager_announce_context["previous" + which_service + "skip"] + 1
+      nodemanager_announce_context["previous" + which_service + "skip"] = \
+          min(nodemanager_announce_context["previous" + which_service + "skip"] * 2, 16)
+    finally:
+      nodemanager_announce_context_lock.release()
+
+
+
+
+
+def advertise_announce(key, value, ttlval, concurrentevents=2, \
+    graceperiod=10, timeout=60):
+  """
+  <Purpose>
+    Announce (PUT) a key : value pair to all default advertise services.
+
+  <Arguments>
+    key (string)
+      The key for our advertise dictionary entry.
+
+    value (string)
+      The value for our advertise dictionary entry.
+
+    ttlval (int)
+      Time in seconds to persist the associated key<->value pair.
+    
+    concurrentevents (int) (optional)
+      How many services to announce on in parallel.
+
+    graceperiod (float) (optional)
+      Amount of time to wait before returning, provided at least one of the 
+      parallel attempts has finished.
+
+      Note that even when this method returns, parallelized announce attempts may
+      still be running. These will terminate in relatively short order, but be 
+      aware of this. It could be a problem, for example, if you tried to set graceperiod 
+      very low to send rapid-fire queries to the advertise servers. This would 
+      probably cause you to exceed your allotted outsockets. (This is only 
+      possible if your timeout value is greater than your graceperiod value.)
+
+      In short, graceperiod is a "soft" timeout. Provided at least one query has 
+      been confirmed, the method will return after graceperiod seconds at most.
+      If none return, this could run all the way till timeout.
+
+    timeout (int) (optional)
+      Absolute allowed time before returning. Provided the method has not 
+      returned by now, successful or not, it will terminate after timeout seconds.
+
+  <Exceptions>
+    AdvertiseError if something goes wrong.
+
+  <Side Effects>
+    Spawns as many worker events as concurrentevents specifies, limited by the
+    number of services available (currently 2). Each worker event consumes one 
+    insocket and one outsocket until it is finished.
+
+  <Returns>
+    None.
+  """
+  # convert different types to strings to avoid type conversion errors #874
+  key = str(key)
+  value = str(value)
+
+  # Wrapped in an array so we can modify the reference (python strings are immutable).
+  exceptions = [''] # track exceptions that occur and raise them at the end
+
+  parallize_worksets = []
+  start_time = getruntime()
+
+  onefinished = [False]
+
+  # Populate parallel jobs list.
+  for service_type in _advertise_all_services:
+    if nodemanager_announce_context["skip" + service_type] == 0:
+      parallize_worksets.append((service_type, key, value, ttlval, \
+          exceptions, onefinished))
+    else:
+      nodemanager_announce_context_lock.acquire()
+      try:
+        nodemanager_announce_context["skip" + service_type] = \
+            nodemanager_announce_context["skip" + service_type] - 1
+      finally:
+        nodemanager_announce_context_lock.release()
+
+  # Begin parallel jobs, instructing parallelize to run no more than 
+  # concurrentevents at once.
+  ph = parallelize_initfunction(parallize_worksets, _try_advertise_announce, \
+      concurrentevents=concurrentevents)
+
+  # Once we have either timed out or exceeded graceperiod with at least one 
+  # service reporting, return whatever data we have. Remaining threads will 
+  # be forsaken and allowed to terminate at their leisure.
+  while not parallelize_isfunctionfinished(ph):
+    sleep(0.015)
+    if getruntime() - start_time > timeout or \
+        (getruntime() - start_time > graceperiod and onefinished[0]):
+      parallelize_abortfunction(ph)
+      break
+
+  # This does not terminate all parallel threads; do not assume it does.
+  parallelize_closefunction(ph)
+
+  # check to see if any successfully returned 
+  if onefinished == [False]:
+    raise AdvertiseError("None of the advertise services could be contacted")
+
+  # if we got an error, indicate it
+  if exceptions[0] != '':
+    raise AdvertiseError(str(exceptions))
+
+  return None
+
+
+
+
+def _try_advertise_lookup(args):
+  """
+  <Purpose>
+    Helper function for advertise lookups. This is the instance function for 
+    parallel lookups which is passed to and managed by parallelize. Each 
+    execution of this method will perform one lookup and return whatever 
+    it is able to get.
+
+  <Arguments>
+    args (4-tuple)
+      which_service (string)
+        The service on which to perform a lookup. This must match one of the 
+        values in _advertise_all_services.
+      key (string)
+        The key to retrieve a value for.
+      maxvals (int)
+        The maximum number of entries to retrieve from the server.
+      finishedref (Array reference with a boolean at index zero)
+        The state of the function instance. If it completes successfully,
+        this boolean will be set to True.
+  """
+  which_service, key, maxvals, finishedref = args
+
+  if which_service not in _advertise_all_services:
+    raise AdvertiseError("Incorrect service type used in internal function _try_advertise_lookup.")
+
+  try:
+    if which_service == "central":
+      results = centralizedadvertise_lookup(key, maxvals)
+    elif which_service == "central_v2":
+      results = v2centralizedadvertise_lookup(key, maxvals)
+    elif which_service == "DOR":
+      results = DORadvertise_lookup(key, maxvals=maxvals)
+    elif which_service == "UDP":
+      results = udpcentralizedadvertise_lookup(key, maxvals)
+    else:
+      raise AdvertiseError("Did not understand service type!")
+
+    finishedref[0] = True
+    return results
+  
+  except Exception, e:
+    return []
+
+
+
+
+def advertise_lookup(key, maxvals=100, lookuptype=None, \
+    concurrentevents=2, graceperiod=10, timeout=60):
+  """
+  <Purpose>
+    Lookup (GET) (a) value(s) stored at the given key in the central advertise
+    server, central advertise server V2, DOR, UDP, or all.
+
+  <Arguments>
+    key
+      The key used to lookup values.
+
+    maxvals (optional, defaults to 100):
+      Maximum number of values to return.
+
+    lookuptype (optional, defaults to ['central', 'central_v2', 'DOR', 'UDP']):
+      Which services to employ looking up values.
+    
+    concurrentevents (optional, defaults to 2):
+      How many services to lookup on in parallel.
+
+    graceperiod (optional, defaults to 10):
+      After this many seconds (can be a float or int type), return the
+      results if one service was reached successfully.
+
+    timeout (optional, defaults to 60):
+      After this many seconds (can be a float or int type), give up.
+
+  <Exceptions>
+    AdvertiseError if something goes wrong.
+
+  <Side Effects>
+    Spawns as many worker events as concurrentevents specifies, limited by the
+    number of services in lookuptype.
+
+  <Returns>
+    All unique values stored at the key.
+  """
+  # convert different types to strings to avoid type conversion errors #874
+  key = str(key)
+
+  # As of January 2012, DHT is no longer a default service.
+  if lookuptype is None:
+    lookuptype = ['central','DOR', 'central_v2', 'UDP']
+
+  parallel_worksets = []
+  start_time = getruntime()
+
+  onefinished = [False]
+
+  # Populate parallel jobs list.
+  for servicetype in lookuptype:
+    if servicetype == "central":
+      parallel_worksets.append(("central", key, maxvals, onefinished))
+    elif servicetype == "central_v2":
+      parallel_worksets.append(("central_v2", key, maxvals, onefinished))
+    elif servicetype == "DOR":
+      parallel_worksets.append(("DOR", key, maxvals, onefinished))
+    elif servicetype == "UDP":
+      parallel_worksets.append(("UDP", key, maxvals, onefinished))
+    else:
+      raise AdvertiseError("Incorrect service type '" + servicetype + "' passed to advertise_lookup().")
+
+  # Start parallel jobs.
+  ph = parallelize_initfunction(parallel_worksets, _try_advertise_lookup, \
+      concurrentevents=concurrentevents)
+
+  # Wait until either timeout or graceperiod with at least one service 
+  # success, and then continue.
+  while not parallelize_isfunctionfinished(ph):
+    sleep(0.015)
+    if getruntime() - start_time > timeout or \
+        (getruntime() - start_time > graceperiod and onefinished[0]):
+      parallelize_abortfunction(ph)
+      break
+
+  parallel_results = parallelize_getresults(ph)['returned']
+  results = []
+
+  # Construct a list of return results
+  for parallel_result in parallel_results:
+    junk, return_value = parallel_result
+    results += return_value
+
+  parallelize_closefunction(ph)
+
+  # Filter results and return.
+  return listops_uniq(results)
+
+#end include advertise.repy
+
+#begin include random.repy
+#already included random.repy
+#end include random.repy
+
+#begin include sockettimeout.repy
+#already included sockettimeout.repy
+#end include sockettimeout.repy
+
+
+
+# This function contacts the server to get the time from a NTP
+def tcp_time_updatetime(localport):
+  """
+  <Purpose>
+    Opens a connection with a server hosting time_server.repy, which obtains the
+    current time via a NTP, then calls time_settime(float(currenttime)) to set
+    the current time to the received value form the server.
+
+  <Arguments>
+    localport:
+
+      The local port which may be used in contacting NTP servers.  It is
+      currently not used in this function, but must be present as an argument
+      for compatibility issues with time.repy.
+
+  <Exceptions>
+    Exception raised if advertise_lookup("time_server") fails after
+    ten tries.
+
+    Exception raised when a connection is not able to be established with any of
+    the servers running time_server.repy.
+
+  <Side Effects>
+    time_settime(float(currenttime)) is called to set the time.
+
+  <Returns>
+    Returns the server ip:port that it managed to successfully connect to
+
+"""
+
+  # Get the ips and ports of servers hosting time_server.repy, retrying nine
+  # times if there is an exception.
+  gotval = False
+  attemptretrieval = 0
+  while attemptretrieval < 2:
+    try:
+      serveraddresses = advertise_lookup("time_server")
+    except Exception:
+      attemptretrieval = attemptretrieval + 1
+      sleep(2)                 # Look up the value again in 10 seconds
+    else:
+      if serveraddresses != [] and serveraddresses[0] != '':
+        gotval = True         # Successfully obtained the value
+        break
+      else:
+        attemptretrieval = attemptretrieval + 1
+
+
+  if not gotval:
+    raise Exception("Unable to locate any servers running time_server.repy")
+
+
+  timelength = 25  # Max length of string, representing the time, to be received
+  shuffledserveraddresses = random_sample(serveraddresses,min(len(serveraddresses),5))
+
+  # Open a connection with a random server hosting time_server.repy
+  timeobtained = False
+  serverindex = 0
+  while serverindex < len(shuffledserveraddresses):
+    remoteaddress = shuffledserveraddresses[serverindex].split(':')
+    remoteip = remoteaddress[0]
+    remoteport = int(remoteaddress[1])
+
+    try:
+      sockobject = timeout_openconn(remoteip,remoteport)
+    except Exception:
+      serverindex +=1
+    else:
+      timeobtained = True
+      break
+
+
+  if not timeobtained:
+    raise Exception("Unable to open connection with any of the ",len(shuffledserveraddresses),"servers running time_server.repy.")
+
+
+  currenttime =''
+  while '$' not in currenttime:
+    currenttime += sockobject.recv(20)
+  sockobject.close()
+  currenttime = float(currenttime[:-1])
+
+  # finally, set the time
+  time_settime(currenttime)
+
+  return shuffledserveraddresses[serverindex]  
+
+
+
+
+#register the update method
+time_register_method('tcp',tcp_time_updatetime)
+
+#end include tcp_time.repy
+
+
+#end include time.repy
+
+def send_message():
+  departure = time_gettime()
+  recipient = mycontext['other_ip']
+  payload = 'Sent at ' + str(departure)
+  
+  log_entry = ','.join(['send', str(departure), recipient, payload])
+  file = open('seastorm.log', 'a')
+  file.write(log_entry + '\n')
+  file.close()
+  
+  message = str(departure) + ':' + payload
+  sendmess(mycontext['other_ip'], mycontext['port'], message)
+  settimer(5, send_message, [])
+
+if callfunc == "initialize":
+  mycontext['other_ip'] = '123.123.123.123'
+  mycontext['port'] = 12345
+  
+  print "Start send"
+  ntp_time_updatetime(mycontext['port'])
+  send_message()

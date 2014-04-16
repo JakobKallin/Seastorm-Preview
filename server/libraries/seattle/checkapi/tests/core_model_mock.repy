@@ -1,0 +1,29 @@
+class InternalModelError(Exception):
+    pass
+
+class InternalCheckAPIError(Exception):
+    pass
+
+def oracle_getter(one, two):
+    return None, None
+
+def tattle_add_item(resource, item):
+    return
+
+def tattle_remove_item(resource, item):
+    return
+
+def is_item_allowed(resource, value):
+    return True
+
+def regex_cond_obj(wrap=True):
+    return ""
+
+def regex_cond_range(min, max, wrap=True):
+    return ""
+
+def regex_cond_ip(wrap=True):
+    return ""
+
+def regex_cond_triple(one, two, three, wrap=True):
+    return ""
